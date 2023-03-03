@@ -1,18 +1,16 @@
-#[derive(Clone, Copy, Eq, PartialEq)]
-pub(crate) struct VarId(u16);
+use crate::prelude::*;
 
 #[derive(Clone, Copy, Eq, PartialEq)]
-pub(crate) struct BlockId(u16);
+pub struct VarId(u16);
 
 #[derive(Clone, Copy, Eq, PartialEq)]
-#[allow(non_camel_case_types)]
-pub(crate) struct u6(u8);
+pub struct BlockId(u16);
 
-pub(crate) struct Fun<'a>(&'a [Inst<'a>]);
+pub struct Fun<'a>(&'a [Inst<'a>]);
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 #[repr(u8)]
-pub(crate) enum ValType {
+pub enum ValType {
   Bool,
   FunRef,
   I6,
@@ -22,7 +20,7 @@ pub(crate) enum ValType {
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 #[repr(u8)]
-pub(crate) enum TagOp11 {
+pub enum TagOp11 {
   BoolNot,
   I64BitNot,
   I64Clz,
@@ -36,7 +34,7 @@ pub(crate) enum TagOp11 {
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 #[repr(u8)]
-pub(crate) enum TagOp21 {
+pub enum TagOp21 {
   BoolAnd,
   BoolEq,
   BoolNeq,
@@ -71,26 +69,26 @@ pub(crate) enum TagOp21 {
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 #[repr(u8)]
-pub(crate) enum TagOp22 {
+pub enum TagOp22 {
   I64MulFull
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 #[repr(u8)]
-pub(crate) enum TagOp31 {
+pub enum TagOp31 {
   I64Sel,
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 #[repr(u8)]
-pub(crate) enum TagIf1 {
+pub enum TagIf1 {
   I64IfZero,
   If,
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 #[repr(u8)]
-pub(crate) enum TagIf2 {
+pub enum TagIf2 {
   I64IfEq,
   I64IfGeS,
   I64IfGeU,
@@ -103,13 +101,13 @@ pub(crate) enum TagIf2 {
   I64IfNeq,
 }
 
-pub(crate) enum Imm {
+pub enum Imm {
   ImmBool(bool),
   ImmI6(u6),
   ImmI64(u64),
 }
 
-pub(crate) enum Inst<'a> {
+pub enum Inst<'a> {
   Block(&'a [ValType]),
   Entry(&'a [ValType]),
   FunCall,
@@ -192,13 +190,25 @@ mod typing {
 }
 
 impl TagOp11 {
-  fn types(self) -> ([ValType; 1], [ValType; 1]) {
+  pub fn types(self) -> ([ValType; 1], [ValType; 1]) {
     typing::TYPE_OP_11[self as u8 as usize]
   }
 }
 
 impl TagOp21 {
-  fn types(self) -> ([ValType; 2], [ValType; 1]) {
+  pub fn types(self) -> ([ValType; 2], [ValType; 1]) {
     typing::TYPE_OP_21[self as usize]
+  }
+}
+
+impl TagOp22 {
+  pub fn types(self) -> ([ValType; 2], [ValType; 2]) {
+    typing::TYPE_OP_22[self as u8 as usize]
+  }
+}
+
+impl TagOp31 {
+  pub fn types(self) -> ([ValType; 3], [ValType; 1]) {
+    typing::TYPE_OP_31[self as usize]
   }
 }

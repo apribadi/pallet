@@ -8,7 +8,10 @@
 #![warn(unused_qualifications)]
 #![warn(unused_results)]
 
-mod bytecode;
+mod prelude;
+pub mod bytecode;
+
+pub use prelude::u6;
 
 use std::fs::File;
 use std::io::Write;
@@ -18,8 +21,8 @@ use target_lexicon;
 
 use cranelift_codegen;
 use cranelift_module;
-use cranelift_frontend;
-use cranelift_object;
+// use cranelift_frontend;
+// use cranelift_object;
 
 mod cranelift {
   // use cranelift_codegen::ir::Signature;
