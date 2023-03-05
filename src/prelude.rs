@@ -16,7 +16,7 @@ pub(crate) mod cranelift {
   // pub(crate) use cranelift_codegen::ir::Value;
   pub(crate) use cranelift_codegen::Context;
   pub(crate) use cranelift_codegen::ir::AbiParam;
-  pub(crate) use cranelift_codegen::ir::Inst;
+  // pub(crate) use cranelift_codegen::ir::Inst;
   pub(crate) use cranelift_codegen::ir::InstBuilder;
   pub(crate) use cranelift_codegen::ir::Type;
   pub(crate) use cranelift_codegen::ir::condcodes::IntCC;
@@ -66,3 +66,7 @@ where
   dst.into_boxed_slice()
 }
 
+
+pub(crate) fn max(x: usize, y: usize) -> usize {
+  if x >= y { x } else { y }
+}

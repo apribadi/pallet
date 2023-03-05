@@ -38,18 +38,20 @@ pub fn go() {
           },
           code: &[
             Inst::Op01(Imm::I64(13)),
-            Inst::Op11(TagOp11::I64Neg, VarId(0)),
-            Inst::Op21(TagOp21::I64Add, VarId(0), VarId(1)),
-            Inst::Op11(TagOp11::I64IsZero, VarId(0)),
+            Inst::Jump(BlockId(0), &[VarId(1), VarId(0)]),
+            Inst::Block(&[ValType::I64, ValType::I64]),
+            Inst::Op11(TagOp11::I64Neg, VarId(3)),
+            Inst::Op21(TagOp21::I64Add, VarId(3), VarId(4)),
+            Inst::Op11(TagOp11::I64IsNonZero, VarId(0)),
             Inst::Op11(TagOp11::I64ToI6, VarId(1)),
-            Inst::Op21(TagOp21::I64Ror, VarId(0), VarId(6)),
+            Inst::Op21(TagOp21::I64Ror, VarId(0), VarId(8)),
             Inst::Return(
               &[
-                VarId(2),
-                VarId(3),
                 VarId(4),
                 VarId(5),
+                VarId(6),
                 VarId(7),
+                VarId(9),
               ]
             ),
           ]
