@@ -3,6 +3,7 @@ use crate::prelude::*;
 fn compile_valtype(ty: bytecode::ValType) -> cranelift::Type {
   match ty {
     bytecode::ValType::I64 => cranelift::I64,
+    bytecode::ValType::Bool => cranelift::I8,
     _ => unimplemented!(),
   }
 }
@@ -101,11 +102,13 @@ pub fn compile<'a>(program: bytecode::Program<'a>) -> Box<[u8]> {
       match inst {
         bytecode::Inst::Op01(imm) => {
           match imm {
-            bytecode::Imm::Bool(_) => {
-              unimplemented!()
+            bytecode::Imm::Bool(x) => {
+              let u = fb.ins().iconst(cranelift::I8, u8::from(x) as i64);
+              vars.push(u);
             }
-            bytecode::Imm::I6(_) => {
-              unimplemented!()
+            bytecode::Imm::I6(x) => {
+              let u = fb.ins().iconst(cranelift::I8, u8::from(x) as i64);
+              vars.push(u);
             }
             bytecode::Imm::I64(x) => {
               let u = fb.ins().iconst(cranelift::I64, x as i64);
@@ -115,8 +118,23 @@ pub fn compile<'a>(program: bytecode::Program<'a>) -> Box<[u8]> {
         }
         bytecode::Inst::Op11(tag, x) => {
           match tag {
+            bytecode::TagOp11::BoolNot => {
+              let u = fb.ins().bxor_imm(vars[usize::from(x)], 1);
+              vars.push(u);
+            }
             bytecode::TagOp11::I64Neg => {
               let u = fb.ins().ineg(vars[usize::from(x)]);
+              vars.push(u);
+            }
+            _ => {
+              unimplemented!()
+            }
+          }
+        }
+        bytecode::Inst::Op21(tag, x, y) => {
+          match tag {
+            bytecode::TagOp21::I64Add => {
+              let u = fb.ins().iadd(vars[usize::from(x)], vars[usize::from(y)]);
               vars.push(u);
             }
             _ => {

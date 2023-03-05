@@ -20,6 +20,7 @@ pub(crate) mod cranelift {
   pub(crate) use cranelift_codegen::ir::Type;
   // pub(crate) use cranelift_codegen::ir::Value;
   pub(crate) use cranelift_codegen::ir::types::I64;
+  pub(crate) use cranelift_codegen::ir::types::I8;
   pub(crate) use cranelift_codegen::isa::CallConv;
   pub(crate) use cranelift_codegen::isa::aarch64::AArch64Backend;
   pub(crate) use cranelift_codegen::settings::Configurable;
@@ -40,11 +41,14 @@ pub(crate) use cranelift::Module;
 #[allow(non_camel_case_types)]
 pub struct u6(u8);
 
+impl From<u8> for u6 {
+  #[inline(always)]
+  fn from(x: u8) -> Self { Self(x & 0x3f) }
+}
+
 impl From<u6> for u8 {
   #[inline(always)]
-  fn from(x: u6) -> Self {
-    x.0
-  }
+  fn from(x: u6) -> Self { x.0 }
 }
 
 pub(crate) fn map_slice<F, T, U>(src: &[T], f: F) -> Box<[U]>

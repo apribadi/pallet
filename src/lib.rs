@@ -16,30 +16,36 @@ use crate::prelude::*;
 
 
 pub fn go() {
+  use bytecode::*;
+
   let program =
-    bytecode::Program {
+    Program {
       functions: &[
-        bytecode::Function {
+        Function {
           name: "foo",
-          signature: bytecode::Signature {
+          signature: Signature {
             inputs: &[
-              bytecode::ValType::I64,
-              bytecode::ValType::I64,
+              ValType::I64,
+              ValType::I64,
             ],
             outputs: &[
-              bytecode::ValType::I64,
-              bytecode::ValType::I64,
-              bytecode::ValType::I64,
+              ValType::I64,
+              ValType::I64,
+              ValType::I64,
+              ValType::Bool,
             ]
           },
           code: &[
-            bytecode::Inst::Op01(bytecode::Imm::I64(13)),
-            bytecode::Inst::Op11(bytecode::TagOp11::I64Neg, bytecode::VarId(0)),
-            bytecode::Inst::Return(
+            Inst::Op01(Imm::I64(13)),
+            Inst::Op11(TagOp11::I64Neg, VarId(0)),
+            Inst::Op21(TagOp21::I64Add, VarId(0), VarId(1)),
+            Inst::Op01(Imm::Bool(true)),
+            Inst::Return(
               &[
-                bytecode::VarId(1),
-                bytecode::VarId(2),
-                bytecode::VarId(3),
+                VarId(2),
+                VarId(3),
+                VarId(4),
+                VarId(5),
               ]
             ),
           ]
