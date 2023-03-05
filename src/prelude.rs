@@ -12,13 +12,14 @@ pub(crate) use cranelift_module;
 pub(crate) mod cranelift {
   // use cranelift_codegen::ir::Signature;
   // use cranelift_module::FuncId;
+  // pub(crate) use cranelift_codegen::ir::Signature;
+  // pub(crate) use cranelift_codegen::ir::Value;
   pub(crate) use cranelift_codegen::Context;
   pub(crate) use cranelift_codegen::ir::AbiParam;
   pub(crate) use cranelift_codegen::ir::Inst;
   pub(crate) use cranelift_codegen::ir::InstBuilder;
-  // pub(crate) use cranelift_codegen::ir::Signature;
   pub(crate) use cranelift_codegen::ir::Type;
-  // pub(crate) use cranelift_codegen::ir::Value;
+  pub(crate) use cranelift_codegen::ir::condcodes::IntCC;
   pub(crate) use cranelift_codegen::ir::types::I64;
   pub(crate) use cranelift_codegen::ir::types::I8;
   pub(crate) use cranelift_codegen::isa::CallConv;

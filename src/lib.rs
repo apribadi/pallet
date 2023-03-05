@@ -39,7 +39,7 @@ pub fn go() {
             Inst::Op01(Imm::I64(13)),
             Inst::Op11(TagOp11::I64Neg, VarId(0)),
             Inst::Op21(TagOp21::I64Add, VarId(0), VarId(1)),
-            Inst::Op01(Imm::Bool(true)),
+            Inst::Op11(TagOp11::I64IsZero, VarId(0)),
             Inst::Return(
               &[
                 VarId(2),

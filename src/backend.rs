@@ -1,14 +1,22 @@
 use crate::prelude::*;
 
+// REPRESENTATION AS CRANELIFT TYPES
+//
+// bool -> i8, either 0x00 or 0x01
+// i6   -> i8, with the two MSBs *unspecified*
+
 fn compile_valtype(ty: bytecode::ValType) -> cranelift::Type {
   match ty {
-    bytecode::ValType::I64 => cranelift::I64,
     bytecode::ValType::Bool => cranelift::I8,
+    bytecode::ValType::I6 => cranelift::I8,
+    bytecode::ValType::I64 => cranelift::I64,
     _ => unimplemented!(),
   }
 }
 
 pub fn compile<'a>(program: bytecode::Program<'a>) -> Box<[u8]> {
+  const CALL_CONV: cranelift::CallConv = cranelift::CallConv::AppleAarch64;
+
   let mut shared_flags = cranelift_codegen::settings::builder();
   shared_flags.set("opt_level", "speed").unwrap();
   let shared_flags =
@@ -47,7 +55,7 @@ pub fn compile<'a>(program: bytecode::Program<'a>) -> Box<[u8]> {
   // declare functions
 
   for &func in program.functions.iter() {
-    ctx.func.signature.call_conv = cranelift::CallConv::AppleAarch64;
+    ctx.func.signature.call_conv = CALL_CONV;
 
     for &ty in func.signature.inputs.iter() {
       let ty = compile_valtype(ty);
@@ -74,7 +82,7 @@ pub fn compile<'a>(program: bytecode::Program<'a>) -> Box<[u8]> {
   // define functions
 
   for (func_idx, &func) in program.functions.iter().enumerate() {
-    ctx.func.signature.call_conv = cranelift::CallConv::AppleAarch64;
+    ctx.func.signature.call_conv = CALL_CONV;
 
     for &ty in func.signature.inputs.iter() {
       let ty = compile_valtype(ty);
@@ -103,11 +111,13 @@ pub fn compile<'a>(program: bytecode::Program<'a>) -> Box<[u8]> {
         bytecode::Inst::Op01(imm) => {
           match imm {
             bytecode::Imm::Bool(x) => {
-              let u = fb.ins().iconst(cranelift::I8, u8::from(x) as i64);
+              let x = u8::from(x);
+              let u = fb.ins().iconst(cranelift::I8, x as i64);
               vars.push(u);
             }
             bytecode::Imm::I6(x) => {
-              let u = fb.ins().iconst(cranelift::I8, u8::from(x) as i64);
+              let x = u8::from(x);
+              let u = fb.ins().iconst(cranelift::I8, x as i64);
               vars.push(u);
             }
             bytecode::Imm::I64(x) => {
@@ -117,24 +127,148 @@ pub fn compile<'a>(program: bytecode::Program<'a>) -> Box<[u8]> {
           }
         }
         bytecode::Inst::Op11(tag, x) => {
+          let x = vars[usize::from(x)];
           match tag {
             bytecode::TagOp11::BoolNot => {
-              let u = fb.ins().bxor_imm(vars[usize::from(x)], 1);
+              let u = fb.ins().bxor_imm(x, 1);
+              vars.push(u);
+            }
+            bytecode::TagOp11::I64BitNot => {
+              let u = fb.ins().bnot(x);
+              vars.push(u);
+            }
+            bytecode::TagOp11::I64Clz => {
+              let u = fb.ins().clz(x);
+              vars.push(u);
+            }
+            bytecode::TagOp11::I64Ctz => {
+              let u = fb.ins().ctz(x);
+              vars.push(u);
+            }
+            bytecode::TagOp11::I64IsZero => {
+              let u = fb.ins().icmp_imm(cranelift::IntCC::Equal, x, 0);
               vars.push(u);
             }
             bytecode::TagOp11::I64Neg => {
-              let u = fb.ins().ineg(vars[usize::from(x)]);
+              let u = fb.ins().ineg(x);
               vars.push(u);
             }
-            _ => {
-              unimplemented!()
+            bytecode::TagOp11::I64Popcnt => {
+              let u = fb.ins().popcnt(x);
+              vars.push(u);
+            }
+            bytecode::TagOp11::I64Swap => {
+              let u = fb.ins().bswap(x);
+              vars.push(u);
+            }
+            bytecode::TagOp11::I64ToI6 => {
+              let u = fb.ins().ireduce(cranelift::I8, x);
+              vars.push(u);
             }
           }
         }
         bytecode::Inst::Op21(tag, x, y) => {
+          let x = vars[usize::from(x)];
+          let y = vars[usize::from(y)];
           match tag {
+            bytecode::TagOp21::BoolAnd => {
+              let u = fb.ins().band(x, y);
+              vars.push(u);
+            }
+            bytecode::TagOp21::BoolEq => {
+              let u = fb.ins().icmp(cranelift::IntCC::Equal, x, y);
+              vars.push(u);
+            }
+            bytecode::TagOp21::BoolNeq => {
+              let u = fb.ins().icmp(cranelift::IntCC::NotEqual, x, y);
+              vars.push(u);
+            }
+            bytecode::TagOp21::BoolOr => {
+              let u = fb.ins().bor(x, y);
+              vars.push(u);
+            }
             bytecode::TagOp21::I64Add => {
-              let u = fb.ins().iadd(vars[usize::from(x)], vars[usize::from(y)]);
+              let u = fb.ins().iadd(x, y);
+              vars.push(u);
+            }
+            bytecode::TagOp21::I64BitAnd => {
+              let u = fb.ins().band(x, y);
+              vars.push(u);
+            }
+            bytecode::TagOp21::I64BitOr => {
+              let u = fb.ins().bor(x, y);
+              vars.push(u);
+            }
+            bytecode::TagOp21::I64BitXor => {
+              let u = fb.ins().bxor(x, y);
+              vars.push(u);
+            }
+            bytecode::TagOp21::I64IsEq => {
+              let u = fb.ins().icmp(cranelift::IntCC::Equal, x, y);
+              vars.push(u);
+            }
+            bytecode::TagOp21::I64IsGeS => {
+              let u = fb.ins().icmp(cranelift::IntCC::SignedGreaterThanOrEqual, x, y);
+              vars.push(u);
+            }
+            bytecode::TagOp21::I64IsGeU => {
+              let u = fb.ins().icmp(cranelift::IntCC::UnsignedGreaterThanOrEqual, x, y);
+              vars.push(u);
+            }
+            bytecode::TagOp21::I64IsGtS => {
+              let u = fb.ins().icmp(cranelift::IntCC::SignedGreaterThan, x, y);
+              vars.push(u);
+            }
+            bytecode::TagOp21::I64IsGtU => {
+              let u = fb.ins().icmp(cranelift::IntCC::UnsignedGreaterThan, x, y);
+              vars.push(u);
+            }
+            bytecode::TagOp21::I64IsLeS => {
+              let u = fb.ins().icmp(cranelift::IntCC::SignedLessThanOrEqual, x, y);
+              vars.push(u);
+            }
+            bytecode::TagOp21::I64IsLeU => {
+              let u = fb.ins().icmp(cranelift::IntCC::UnsignedLessThanOrEqual, x, y);
+              vars.push(u);
+            }
+            bytecode::TagOp21::I64IsLtS => {
+              let u = fb.ins().icmp(cranelift::IntCC::SignedLessThan, x, y);
+              vars.push(u);
+            }
+            bytecode::TagOp21::I64IsLtU => {
+              let u = fb.ins().icmp(cranelift::IntCC::UnsignedLessThan, x, y);
+              vars.push(u);
+            }
+            bytecode::TagOp21::I64IsNeq => {
+              let u = fb.ins().icmp(cranelift::IntCC::NotEqual, x, y);
+              vars.push(u);
+            }
+            bytecode::TagOp21::I64MaxS => {
+              let u = fb.ins().smax(x, y);
+              vars.push(u);
+            }
+            bytecode::TagOp21::I64MaxU => {
+              let u = fb.ins().umax(x, y);
+              vars.push(u);
+            }
+            bytecode::TagOp21::I64MinS => {
+              let u = fb.ins().smin(x, y);
+              vars.push(u);
+            }
+            bytecode::TagOp21::I64MinU => {
+              let u = fb.ins().umin(x, y);
+              vars.push(u);
+            }
+            bytecode::TagOp21::I64Mul => {
+              let u = fb.ins().imul(x, y);
+              vars.push(u);
+            }
+            bytecode::TagOp21::I64MulHiS => {
+              let u = fb.ins().smulhi(x, y);
+              vars.push(u);
+            }
+            bytecode::TagOp21::I64MulHiU => {
+              let u = fb.ins().umulhi(x, y);
               vars.push(u);
             }
             _ => {
