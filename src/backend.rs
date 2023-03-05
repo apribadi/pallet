@@ -17,16 +17,16 @@ fn compile_valtype(ty: bytecode::ValType) -> cranelift::Type {
 pub fn compile<'a>(program: bytecode::Program<'a>) -> Box<[u8]> {
   const CALL_CONV: cranelift::CallConv = cranelift::CallConv::AppleAarch64;
 
-  let mut shared_flags = cranelift_codegen::settings::builder();
+  let mut shared_flags = cranelift::codegen::settings::builder();
   shared_flags.set("opt_level", "speed").unwrap();
   let shared_flags =
-    cranelift_codegen::settings::Flags::new(
+    cranelift::codegen::settings::Flags::new(
       shared_flags
     );
 
-  let aarch64_flags = cranelift_codegen::isa::aarch64::settings::builder();
+  let aarch64_flags = cranelift::codegen::isa::aarch64::settings::builder();
   let aarch64_flags =
-    cranelift_codegen::isa::aarch64::settings::Flags::new(
+    cranelift::codegen::isa::aarch64::settings::Flags::new(
       &shared_flags,
       aarch64_flags
     );
@@ -42,7 +42,7 @@ pub fn compile<'a>(program: bytecode::Program<'a>) -> Box<[u8]> {
     cranelift::ObjectBuilder::new(
       Arc::new(isa),
       "???",
-      cranelift_module::default_libcall_names()
+      cranelift::module::default_libcall_names()
     ).unwrap();
 
   let mut object_module = cranelift::ObjectModule::new(object_builder);
@@ -95,7 +95,6 @@ pub fn compile<'a>(program: bytecode::Program<'a>) -> Box<[u8]> {
     }
 
     let mut fb = cranelift::FunctionBuilder::new(&mut ctx.func, &mut fbc);
-
     let mut vars = Vec::new();
     let mut blocks = Vec::new();
     let mut num_blocks = 0;
@@ -151,8 +150,6 @@ pub fn compile<'a>(program: bytecode::Program<'a>) -> Box<[u8]> {
                 );
             }
           }
-
-          let _: _ = fb.ins().jump(a, &map_slice(xs, |&x| vars[usize::from(x)]));
         }
         bytecode::Inst::Jump(a, xs) => {
           let a = a.0 as usize;
@@ -307,7 +304,7 @@ pub fn compile<'a>(program: bytecode::Program<'a>) -> Box<[u8]> {
     fb.finalize();
 
     let mut s = String::new();
-    cranelift_codegen::write::write_function(&mut s, &ctx.func).unwrap();
+    cranelift::codegen::write::write_function(&mut s, &ctx.func).unwrap();
     std::io::stdout().write_all(s.as_bytes()).unwrap();
 
     let func_id = func_ids[func_idx];
