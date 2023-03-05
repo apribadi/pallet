@@ -9,52 +9,56 @@
 #![warn(unused_results)]
 
 mod prelude;
+pub mod backend;
 pub mod bytecode;
 
-pub use prelude::u6;
+use crate::prelude::*;
 
-use std::fs::File;
-use std::io::Write;
-use std::sync::Arc;
-
-use target_lexicon;
-
-use cranelift_codegen;
-use cranelift_module;
-// use cranelift_frontend;
-// use cranelift_object;
-
-mod cranelift {
-  // use cranelift_codegen::ir::Signature;
-  // use cranelift_module::FuncId;
-  pub(crate) use cranelift_codegen::Context;
-  pub(crate) use cranelift_codegen::ir::AbiParam;
-  pub(crate) use cranelift_codegen::ir::Inst;
-  pub(crate) use cranelift_codegen::ir::InstBuilder;
-  pub(crate) use cranelift_codegen::ir::types::I64;
-  pub(crate) use cranelift_codegen::isa::CallConv;
-  pub(crate) use cranelift_codegen::isa::aarch64::AArch64Backend;
-  pub(crate) use cranelift_frontend::FunctionBuilder;
-  pub(crate) use cranelift_frontend::FunctionBuilderContext;
-  pub(crate) use cranelift_module::Linkage;
-  pub(crate) use cranelift_module::Module;
-  pub(crate) use cranelift_module::ModuleCompiledFunction;
-  pub(crate) use cranelift_object::ObjectBuilder;
-  pub(crate) use cranelift_object::ObjectModule;
-}
-
-use cranelift::InstBuilder;
-use cranelift::Module;
-
-pub fn foo() {
-  println!("hello!");
-}
 
 pub fn go() {
-  let shared_flags =
-    cranelift_codegen::settings::Flags::new(
-      cranelift_codegen::settings::builder()
-    );
+  let program =
+    bytecode::Program {
+      functions: &[
+        bytecode::Function {
+          name: "foo",
+          signature: bytecode::Signature {
+            inputs: &[
+              bytecode::ValType::I64,
+              bytecode::ValType::I64,
+            ],
+            outputs: &[
+              bytecode::ValType::I64,
+              bytecode::ValType::I64,
+              bytecode::ValType::I64,
+            ]
+          },
+          code: &[
+            bytecode::Inst::Op01(bytecode::Imm::I64(13)),
+            bytecode::Inst::Op11(bytecode::TagOp11::I64Neg, bytecode::VarId(0)),
+            bytecode::Inst::Return(
+              &[
+                bytecode::VarId(1),
+                bytecode::VarId(2),
+                bytecode::VarId(3),
+              ]
+            ),
+          ]
+        }
+      ]
+    };
+
+  let object_bytes = backend::compile(program);
+
+  let mut out = File::create("out.o").unwrap();
+
+  out.write_all(&object_bytes).unwrap()
+}
+
+/*
+pub fn go() {
+  let mut shared_flags = cranelift_codegen::settings::builder();
+  shared_flags.set("opt_level", "speed").unwrap();
+  let shared_flags = cranelift_codegen::settings::Flags::new(shared_flags);
 
   let aarch64_flags =
     cranelift_codegen::isa::aarch64::settings::Flags::new(
@@ -90,26 +94,26 @@ pub fn go() {
   ctx.func.signature.returns.push(cranelift::AbiParam::new(cranelift::I64));
   ctx.func.signature.returns.push(cranelift::AbiParam::new(cranelift::I64));
   ctx.func.signature.returns.push(cranelift::AbiParam::new(cranelift::I64));
-  ctx.func.signature.returns.push(cranelift::AbiParam::new(cranelift::I64));
-  ctx.func.signature.returns.push(cranelift::AbiParam::new(cranelift::I64));
 
   let mut fb = cranelift::FunctionBuilder::new(&mut ctx.func, &mut func_builder_ctx);
 
-  let entry_block = fb.create_block();
+  let mut blocks = Vec::new();
 
-  fb.append_block_params_for_function_params(entry_block);
-  fb.switch_to_block(entry_block);
-  let x = fb.ins().iconst(cranelift::I64, 13);
-  let _: cranelift::Inst = fb.ins().return_(&[x, x, x, x, x]);
+  blocks.push(fb.create_block());
+  // blocks.push(fb.create_block());
+  // blocks.push(fb.create_block());
+
+  let block = blocks[0];
+
+  fb.switch_to_block(block);
+  fb.append_block_params_for_function_params(block);
+  let x = fb.block_params(block)[0];
+  let y = fb.ins().iconst(cranelift::I64, 13);
+  let z = fb.ins().iadd(x, y);
+  let _: cranelift::Inst = fb.ins().return_(&[z, y, x]);
 
   fb.seal_all_blocks();
   fb.finalize();
-
-  if true {
-    let mut s = String::new();
-    cranelift_codegen::write::write_function(&mut s, &ctx.func).unwrap();
-    std::io::stdout().write_all(s.as_bytes()).unwrap();
-  }
 
   /////////////////
 
@@ -137,3 +141,4 @@ pub fn go() {
 
   out.write_all(object_bytes).unwrap()
 }
+*/
