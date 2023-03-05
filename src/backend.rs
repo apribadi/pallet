@@ -271,8 +271,29 @@ pub fn compile<'a>(program: bytecode::Program<'a>) -> Box<[u8]> {
               let u = fb.ins().umulhi(x, y);
               vars.push(u);
             }
-            _ => {
-              unimplemented!()
+            bytecode::TagOp21::I64Rol => {
+              let u = fb.ins().rotl(x, y);
+              vars.push(u);
+            }
+            bytecode::TagOp21::I64Ror => {
+              let u = fb.ins().rotr(x, y);
+              vars.push(u);
+            }
+            bytecode::TagOp21::I64Shl => {
+              let u = fb.ins().ishl(x, y);
+              vars.push(u);
+            }
+            bytecode::TagOp21::I64ShrS => {
+              let u = fb.ins().sshr(x, y);
+              vars.push(u);
+            }
+            bytecode::TagOp21::I64ShrU => {
+              let u = fb.ins().ushr(x, y);
+              vars.push(u);
+            }
+            bytecode::TagOp21::I64Sub => {
+              let u = fb.ins().isub(x, y);
+              vars.push(u);
             }
           }
         }

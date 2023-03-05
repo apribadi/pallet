@@ -33,6 +33,7 @@ pub fn go() {
               ValType::I64,
               ValType::I64,
               ValType::Bool,
+              ValType::I64,
             ]
           },
           code: &[
@@ -40,12 +41,15 @@ pub fn go() {
             Inst::Op11(TagOp11::I64Neg, VarId(0)),
             Inst::Op21(TagOp21::I64Add, VarId(0), VarId(1)),
             Inst::Op11(TagOp11::I64IsZero, VarId(0)),
+            Inst::Op11(TagOp11::I64ToI6, VarId(1)),
+            Inst::Op21(TagOp21::I64Ror, VarId(0), VarId(6)),
             Inst::Return(
               &[
                 VarId(2),
                 VarId(3),
                 VarId(4),
                 VarId(5),
+                VarId(7),
               ]
             ),
           ]
