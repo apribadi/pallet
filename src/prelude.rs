@@ -3,6 +3,7 @@ pub(crate) use std::fs::File;
 pub(crate) use std::io::Write;
 pub(crate) use std::sync::Arc;
 pub(crate) use target_lexicon;
+pub(crate) use core::array;
 
 pub(crate) mod cranelift {
   // use cranelift_codegen::ir::Signature;

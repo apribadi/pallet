@@ -19,9 +19,11 @@ pub struct Function<'a> {
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
+#[repr(transparent)]
 pub struct VarId(pub u16);
 
 #[derive(Clone, Copy, Eq, PartialEq)]
+#[repr(transparent)]
 pub struct BlockId(pub u16);
 
 #[derive(Clone, Copy, Eq, PartialEq)]
@@ -99,24 +101,24 @@ pub enum TagOp31 {
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 #[repr(u8)]
-pub enum TagIf1 {
-  I64IfNonZero,
-  If,
+pub enum TagIf100 {
+  BoolIsTrue,
+  I64IsNonZero,
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 #[repr(u8)]
-pub enum TagIf2 {
-  I64IfEq,
-  I64IfGeS,
-  I64IfGeU,
-  I64IfGtS,
-  I64IfGtU,
-  I64IfLeS,
-  I64IfLeU,
-  I64IfLtS,
-  I64IfLtU,
-  I64IfNeq,
+pub enum TagIf200 {
+  I64IsEq,
+  I64IsGeS,
+  I64IsGeU,
+  I64IsGtS,
+  I64IsGtU,
+  I64IsLeS,
+  I64IsLeU,
+  I64IsLtS,
+  I64IsLtU,
+  I64IsNeq,
 }
 
 #[derive(Clone, Copy)]
@@ -133,8 +135,8 @@ pub enum Inst<'a> {
   FunCallIndirect,
   FunTailCall,
   FunTailCallIndirect,
-  If1(TagIf1, VarId, BlockId, &'a [VarId], BlockId, &'a [VarId]),
-  If2(TagIf2, VarId, VarId, BlockId, &'a [VarId], BlockId, &'a [VarId]),
+  If100(TagIf100, VarId, BlockId, BlockId),
+  If200(TagIf200, VarId, VarId, BlockId, BlockId),
   Jump(BlockId, &'a [VarId]),
   Op01(Imm),
   Op11(TagOp11, VarId),

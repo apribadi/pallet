@@ -119,35 +119,21 @@ pub fn compile<'a>(program: bytecode::Program<'a>) -> Box<[u8]> {
             vars.push(fb.append_block_param(block, compile_valtype(ty)));
           }
         }
-        bytecode::Inst::If1(tag, p, a, xs, b, ys) => {
+        bytecode::Inst::If100(tag, x, a, b) => {
           let a = a.0 as usize;
           let b = b.0 as usize;
           let n = max(a, b) + 1;
           while blocks.len() < n { blocks.push(fb.create_block()); }
           let a = blocks[a];
           let b = blocks[b];
-          let p = vars[usize::from(p)];
+          let x = vars[usize::from(x)];
 
           match tag {
-            bytecode::TagIf1::I64IfNonZero => {
-              let _: _ =
-                fb.ins().brif(
-                  p,
-                  a,
-                  &map_slice(xs, |&x| vars[usize::from(x)]),
-                  b,
-                  &map_slice(ys, |&y| vars[usize::from(y)])
-                );
+            bytecode::TagIf100::BoolIsTrue => {
+              let _: _ = fb.ins().brif(x, a, &[], b, &[]);
             }
-            bytecode::TagIf1::If => {
-              let _: _ =
-                fb.ins().brif(
-                  p,
-                  a,
-                  &map_slice(xs, |&x| vars[usize::from(x)]),
-                  b,
-                  &map_slice(ys, |&y| vars[usize::from(y)])
-                );
+            bytecode::TagIf100::I64IsNonZero => {
+              let _: _ = fb.ins().brif(x, a, &[], b, &[]);
             }
           }
         }

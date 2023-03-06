@@ -10,6 +10,7 @@
 mod prelude;
 pub mod backend;
 pub mod bytecode;
+pub mod bc;
 
 use crate::prelude::*;
 
