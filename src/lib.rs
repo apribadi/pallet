@@ -36,7 +36,7 @@ pub fn go() {
             ]
           },
           code: &[
-            Inst::Op01(Imm::I64(13)),
+            Inst::Const(Imm::I64(13)),
             Inst::Jump(BlockId(0), &[VarId(1), VarId(0)]),
             Inst::Block(&[ValType::I64, ValType::I64]),
             Inst::Op11(TagOp11::I64Neg, VarId(3)),

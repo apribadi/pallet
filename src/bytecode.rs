@@ -131,6 +131,7 @@ pub enum Imm {
 #[derive(Clone, Copy)]
 pub enum Inst<'a> {
   Block(&'a [ValType]),
+  Const(Imm),
   FunCall,
   FunCallIndirect,
   FunTailCall,
@@ -138,7 +139,6 @@ pub enum Inst<'a> {
   If100(TagIf100, VarId, BlockId, BlockId),
   If200(TagIf200, VarId, VarId, BlockId, BlockId),
   Jump(BlockId, &'a [VarId]),
-  Op01(Imm),
   Op11(TagOp11, VarId),
   Op21(TagOp21, VarId, VarId),
   Op22(TagOp22, VarId, VarId),

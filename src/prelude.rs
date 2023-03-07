@@ -3,7 +3,6 @@ pub(crate) use std::fs::File;
 pub(crate) use std::io::Write;
 pub(crate) use std::sync::Arc;
 pub(crate) use target_lexicon;
-pub(crate) use core::array;
 
 pub(crate) mod cranelift {
   // use cranelift_codegen::ir::Signature;
@@ -67,4 +66,73 @@ impl From<u8> for u6 {
 impl From<u6> for u8 {
   #[inline(always)]
   fn from(x: u6) -> Self { x.0 }
+}
+
+pub(crate) trait SliceExt<T> {
+  fn get_array<const N: usize>(&self, offset: usize) -> &[T; N];
+
+  fn get_array_mut<const N: usize>(&mut self, offset: usize) -> &mut [T; N];
+}
+
+pub(crate) trait BytesExt {
+  fn get_u16(&self, offset: usize) -> u16;
+  fn get_u32(&self, offset: usize) -> u32;
+  fn get_u64(&self, offset: usize) -> u64;
+  fn set_u16(&mut self, offset: usize, value: u16);
+  fn set_u32(&mut self, offset: usize, value: u32);
+  fn set_u64(&mut self, offset: usize, value: u64);
+}
+
+impl<T> SliceExt<T> for [T] {
+  #[inline(always)]
+  fn get_array<const N: usize>(&self, offset: usize) -> &[T; N] {
+    let len = self.len();
+    assert!(offset <= len && N <= len - offset);
+    let p = self.as_ptr();
+    let p = unsafe { p.add(offset) };
+    let p = p as *const [T; N];
+    unsafe { &*p }
+  }
+
+  #[inline(always)]
+  fn get_array_mut<const N: usize>(&mut self, offset: usize) -> &mut [T; N] {
+    let len = self.len();
+    assert!(offset <= len && N <= len - offset);
+    let p = self.as_mut_ptr();
+    let p = unsafe { p.add(offset) };
+    let p = p as *mut [T; N];
+    unsafe { &mut *p }
+  }
+}
+
+impl BytesExt for [u8] {
+  #[inline(always)]
+  fn get_u16(&self, offset: usize) -> u16 {
+    u16::from_le_bytes(*self.get_array(offset))
+  }
+
+  #[inline(always)]
+  fn get_u32(&self, offset: usize) -> u32 {
+    u32::from_le_bytes(*self.get_array(offset))
+  }
+
+  #[inline(always)]
+  fn get_u64(&self, offset: usize) -> u64 {
+    u64::from_le_bytes(*self.get_array(offset))
+  }
+
+  #[inline(always)]
+  fn set_u16(&mut self, offset: usize, value: u16) {
+    *self.get_array_mut(offset) = value.to_le_bytes();
+  }
+
+  #[inline(always)]
+  fn set_u32(&mut self, offset: usize, value: u32) {
+    *self.get_array_mut(offset) = value.to_le_bytes();
+  }
+
+  #[inline(always)]
+  fn set_u64(&mut self, offset: usize, value: u64) {
+    *self.get_array_mut(offset) = value.to_le_bytes();
+  }
 }
