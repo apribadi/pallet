@@ -20,6 +20,25 @@ pub struct ValTypeList([u8]);
 
 pub struct ValTypeListIter<'a>(&'a [u8]);
 
+#[derive(Clone, Copy, Eq, PartialEq)]
+#[repr(u8)]
+pub enum ValType {
+  Bool,
+  I6,
+  I64,
+}
+
+#[repr(transparent)]
+pub struct VarIdList([u8]);
+
+pub struct VarIdListIter<'a>(&'a [u8]);
+
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub struct VarId(pub u16);
+
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub struct BlockId(pub u16);
+
 #[repr(transparent)]
 pub struct InstList([u8]);
 
@@ -77,20 +96,6 @@ pub struct Op31([u8]);
 
 #[repr(transparent)]
 pub struct Return([u8]);
-
-#[derive(Clone, Copy, Eq, PartialEq)]
-pub struct VarId(pub u16);
-
-#[derive(Clone, Copy, Eq, PartialEq)]
-pub struct BlockId(pub u16);
-
-#[derive(Clone, Copy, Eq, PartialEq)]
-#[repr(u8)]
-pub enum ValType {
-  Bool,
-  I6,
-  I64,
-}
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 #[repr(u8)]
@@ -339,6 +344,50 @@ impl<'a> Iterator for ValTypeListIter<'a> {
   }
 }
 
+impl ValType {
+  const MAX_VALUE: Self = Self::I64;
+
+  #[inline(always)]
+  pub fn is_valid(x: u8) -> bool {
+    x <= Self::MAX_VALUE.encode()
+  }
+
+  #[inline(always)]
+  pub fn encode(self) -> u8 {
+    self as u8
+  }
+
+  #[inline(always)]
+  pub fn decode(x: u8) -> Self {
+    assert!(Self::is_valid(x));
+    unsafe { transmute::<u8, Self>(x) }
+  }
+}
+
+impl VarIdList {
+  pub fn iter(&self) -> VarIdListIter<'_> {
+    VarIdListIter(&self.0)
+  }
+}
+
+impl<'a> Iterator for VarIdListIter<'a> {
+  type Item = VarId;
+
+  #[inline(always)]
+  fn next(&mut self) -> Option<Self::Item> {
+    let a = self.0;
+
+    if a.is_empty() { return None; }
+
+    let x = a.get_u16(0);
+    let y = &a[1 ..];
+
+    self.0 = y;
+
+    Some(VarId(x))
+  }
+}
+
 impl InstList {
   pub fn iter(&self) -> InstListIter<'_> {
     InstListIter(&self.0)
@@ -357,13 +406,15 @@ impl<'a> Iterator for InstListIter<'a> {
     let (x, y) =
       match TagInst::decode(a[0]) {
         TagInst::Block => {
-          // tag_inst u8
-          // count    u16
-          // types    u8[]
+          // tag_inst  u8
+          // count     u16
+          // val_type  u8[]
 
           let n = a.get_u16(1) as usize;
-          let x = &a[3 .. 3 + n] as *const [u8] as *const ValTypeList;
-          let y = &a[3 + n .. ];
+          let i = 3;
+          let j = 3 + n;
+          let x = &a[i .. j] as *const [u8] as *const ValTypeList;
+          let y = &a[j ..];
 
           (Inst::Block(unsafe { &*x }), y)
         }
@@ -374,8 +425,10 @@ impl<'a> Iterator for InstListIter<'a> {
           // block_id  u16
           // block_id  u16
 
-          let x = &a[1 .. 8] as *const [u8] as *const If100;
-          let y = &a[8 ..];
+          let i = 1;
+          let j = 8;
+          let x = &a[i .. j] as *const [u8] as *const If100;
+          let y = &a[j ..];
 
           (Inst::If100(unsafe { &*x }), y)
         }
@@ -387,24 +440,26 @@ impl<'a> Iterator for InstListIter<'a> {
           // block_id  u16
           // block_id  u16
 
-          let x = &a[1 .. 10] as *const [u8] as *const If200;
-          let y = &a[10 ..];
+          let i = 1;
+          let j = 10;
+          let x = &a[i .. j] as *const [u8] as *const If200;
+          let y = &a[j ..];
 
           (Inst::If200(unsafe { &*x }), y)
         }
         TagInst::Jump => {
-          // tag_inst
-          // count
-          // ...
+          // tag_inst  u8
+          // count     u16
+          // block_id  u16
+          // var_id    u16[]
 
-          let n = a[1] as usize;
-          let x = &a[2 .. 2 + n] as *const [u8] as *const ValTypeList;
-          let y = &a[2 + n .. ];
+          let n = a.get_u16(1) as usize;
+          let i = 3;
+          let j = 3 + 2 + 2 * n;
+          let x = &a[i .. j] as *const [u8] as *const Jump;
+          let y = &a[j ..];
 
-          let x = &a[1 .. 10] as *const [u8] as *const If200;
-          let y = &a[10 ..];
-
-          (Inst::If200(unsafe { &*x }), y)
+          (Inst::Jump(unsafe { &*x }), y)
         }
         _ => {
           unimplemented!()
@@ -437,6 +492,48 @@ impl TagInst {
   }
 }
 
+impl If100 {
+  const OFS0: usize = 0;
+  const OFS1: usize = 1;
+  const OFS2: usize = 3;
+  const OFS3: usize = 5;
+
+  #[inline(always)]
+  pub fn tag(&self) -> TagIf100 { TagIf100::decode(self.0[Self::OFS0]) }
+
+  #[inline(always)]
+  pub fn var_id(&self) -> VarId { VarId(self.0.get_u16(Self::OFS1)) }
+
+  #[inline(always)]
+  pub fn block_id_0(&self) -> BlockId { BlockId(self.0.get_u16(Self::OFS2)) }
+
+  #[inline(always)]
+  pub fn block_id_1(&self) -> BlockId { BlockId(self.0.get_u16(Self::OFS3)) }
+}
+
+impl If200 {
+  const OFS0: usize = 0;
+  const OFS1: usize = 1;
+  const OFS2: usize = 3;
+  const OFS3: usize = 5;
+  const OFS4: usize = 7;
+
+  #[inline(always)]
+  pub fn tag(&self) -> TagIf200 { TagIf200::decode(self.0[Self::OFS0]) }
+
+  #[inline(always)]
+  pub fn var_id_0(&self) -> VarId { VarId(self.0.get_u16(Self::OFS1)) }
+
+  #[inline(always)]
+  pub fn var_id_1(&self) -> VarId { VarId(self.0.get_u16(Self::OFS2)) }
+
+  #[inline(always)]
+  pub fn block_id_0(&self) -> BlockId { BlockId(self.0.get_u16(Self::OFS3)) }
+
+  #[inline(always)]
+  pub fn block_id_1(&self) -> BlockId { BlockId(self.0.get_u16(Self::OFS4)) }
+}
+
 impl TagIf100 {
   const MAX_VALUE: Self = Self::I64IsNonZero;
 
@@ -457,8 +554,8 @@ impl TagIf100 {
   }
 }
 
-impl ValType {
-  const MAX_VALUE: Self = Self::I64;
+impl TagIf200 {
+  const MAX_VALUE: Self = Self::I64IsNeq;
 
   #[inline(always)]
   pub fn is_valid(x: u8) -> bool {
