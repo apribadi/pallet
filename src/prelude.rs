@@ -167,14 +167,14 @@ impl<'a, T> ReadBuf<'a, T> {
   }
 
   #[inline(always)]
-  pub(crate) fn pop_array<const K: usize>(&mut self) -> &[T; K] {
+  pub(crate) fn pop_array<const K: usize>(&mut self) -> &'a [T; K] {
     let (x, y) = self.0.split_array();
     self.0 = y;
     x
   }
 
   #[inline(always)]
-  pub(crate) fn pop_slice(&mut self, k: usize) -> &[T] {
+  pub(crate) fn pop_slice(&mut self, k: usize) -> &'a [T] {
     let (x, y) = self.0.split_at(k);
     self.0 = y;
     x

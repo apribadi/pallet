@@ -1,73 +1,73 @@
 use crate::prelude::*;
 use core::mem::transmute;
 
-#[repr(transparent)]
-pub struct Prog([u8]);
+#[derive(Clone, Copy)]
+pub struct Prog<'a>(&'a [u8]);
 
-#[repr(transparent)]
-pub struct FunList([u8]);
+#[derive(Clone, Copy)]
+pub struct FunList<'a>(&'a [u8]);
 
 pub struct FunIter<'a>(ReadBuf<'a, u8>);
 
-#[repr(transparent)]
-pub struct Fun([u8]);
+#[derive(Clone, Copy)]
+pub struct Fun<'a>(&'a [u8]);
 
-#[repr(transparent)]
-pub struct FunType([u8]);
+#[derive(Clone, Copy)]
+pub struct FunType<'a>(&'a [u8]);
 
-#[repr(transparent)]
-pub struct ValTypeList([u8]);
+#[derive(Clone, Copy)]
+pub struct ValTypeList<'a>(&'a [u8]);
 
 pub struct ValTypeIter<'a>(ReadBuf<'a, u8>);
 
-#[repr(transparent)]
-pub struct VarIdList([u8]);
+#[derive(Clone, Copy)]
+pub struct VarIdList<'a>(&'a [u8]);
 
 pub struct VarIdIter<'a>(ReadBuf<'a, u8>);
 
-#[repr(transparent)]
-pub struct InstList([u8]);
+#[derive(Clone, Copy)]
+pub struct InstList<'a>(&'a [u8]);
 
 pub struct InstIter<'a>(ReadBuf<'a, u8>);
 
-#[repr(transparent)]
-pub struct If100([u8; 7]);
+#[derive(Clone, Copy)]
+pub struct If100<'a>(&'a [u8; 7]);
 
-#[repr(transparent)]
-pub struct If200([u8; 9]);
+#[derive(Clone, Copy)]
+pub struct If200<'a>(&'a [u8; 9]);
 
-#[repr(transparent)]
-pub struct Jump([u8]);
+#[derive(Clone, Copy)]
+pub struct Jump<'a>(&'a [u8]);
 
-#[repr(transparent)]
-pub struct Op11([u8; 3]);
+#[derive(Clone, Copy)]
+pub struct Op11<'a>(&'a [u8; 3]);
 
-#[repr(transparent)]
-pub struct Op21([u8; 5]);
+#[derive(Clone, Copy)]
+pub struct Op21<'a>(&'a [u8; 5]);
 
-#[repr(transparent)]
-pub struct Op22([u8; 5]);
+#[derive(Clone, Copy)]
+pub struct Op22<'a>(&'a [u8; 5]);
 
-#[repr(transparent)]
-pub struct Op31([u8; 7]);
+#[derive(Clone, Copy)]
+pub struct Op31<'a>(&'a [u8; 7]);
 
-#[repr(transparent)]
-pub struct Return([u8]);
+#[derive(Clone, Copy)]
+pub struct Return<'a>(&'a [u8]);
 
 #[derive(Clone, Copy)]
 pub enum Inst<'a> {
-  Block(&'a ValTypeList),
+  Block(ValTypeList<'a>),
   ConstBool(bool),
   ConstI6(u6),
   ConstI64(u64),
-  If100(&'a If100),
-  If200(&'a If200),
-  Jump(&'a Jump),
-  Op11(&'a Op11),
-  Op21(&'a Op21),
-  Op22(&'a Op22),
-  Op31(&'a Op31),
-  Return(&'a Return),
+  If100(If100<'a>),
+  If200(If200<'a>),
+  Jump(Jump<'a>),
+  Op11(Op11<'a>),
+  Op21(Op21<'a>),
+  Op22(Op22<'a>),
+  Op31(Op31<'a>),
+  Return(Return<'a>),
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
@@ -193,34 +193,33 @@ pub enum TagOp31 {
   I64Sel,
 }
 
-impl Prog {
-  pub fn fun_list(&self) -> &FunList {
-    let x = &self.0 as *const [u8] as *const FunList;
-    unsafe { &*x }
+impl<'a> Prog<'a> {
+  pub fn fun_list(self) -> FunList<'a> {
+    FunList(self.0)
   }
 }
 
-impl FunList {
-  pub fn iter(&self) -> FunIter<'_> {
-    FunIter(ReadBuf::new(&self.0))
+impl<'a> FunList<'a> {
+  pub fn iter(self) -> FunIter<'a> {
+    FunIter(ReadBuf::new(self.0))
   }
 }
 
 impl<'a> Iterator for FunIter<'a> {
-  type Item = &'a Fun;
+  type Item = Fun<'a>;
 
   #[inline(always)]
   fn next(&mut self) -> Option<Self::Item> {
     if self.0.is_empty() { return None; }
 
     let n = self.0.pop_u32();
-    let x = self.0.pop_slice(n as usize) as *const [u8] as *const Fun;
+    let x = self.0.pop_slice(n as usize);
 
-    Some(unsafe { &*x })
+    Some(Fun(x))
   }
 }
 
-impl Fun {
+impl<'a> Fun<'a> {
   // ofs1
   // ofs2
   // name      | [ofs0, ofs1)
@@ -231,43 +230,43 @@ impl Fun {
   // ofs3 = len
 
   #[inline(always)]
-  fn ofs0(&self) -> usize { let _ = self; 8 }
+  fn ofs0(self) -> usize { let _ = self; 8 }
 
   #[inline(always)]
-  fn ofs1(&self) -> usize { self.0.get_u32(0) as usize }
+  fn ofs1(self) -> usize { self.0.get_u32(0) as usize }
 
   #[inline(always)]
-  fn ofs2(&self) -> usize { self.0.get_u32(4) as usize }
+  fn ofs2(self) -> usize { self.0.get_u32(4) as usize }
 
   #[inline(always)]
-  fn ofs3(&self) -> usize { self.0.len() }
+  fn ofs3(self) -> usize { self.0.len() }
 
-  pub fn name(&self) -> &str {
-    let a = &self.0;
+  pub fn name(self) -> &'a str {
+    let a = self.0;
     let i = self.ofs0();
     let j = self.ofs1();
     let x = &a[i .. j];
     unsafe { core::str::from_utf8_unchecked(x) }
   }
 
-  pub fn fun_type(&self) -> &FunType {
-    let a = &self.0;
+  pub fn fun_type(self) -> FunType<'a> {
+    let a = self.0;
     let i = self.ofs1();
     let j = self.ofs2();
-    let x = &a[i .. j] as *const [u8] as *const FunType;
-    unsafe { &*x }
+    let x = &a[i .. j];
+    FunType(x)
   }
 
-  pub fn inst_list(&self) -> &InstList {
-    let a = &self.0;
+  pub fn inst_list(self) -> InstList<'a> {
+    let a = self.0;
     let i = self.ofs2();
     let j = self.ofs3();
-    let x = &a[i .. j] as *const [u8] as *const InstList;
-    unsafe { &*x }
+    let x = &a[i .. j];
+    InstList(x)
   }
 }
 
-impl FunType {
+impl<'a> FunType<'a> {
   // ofs1
   // val_type_list | [ofs0, ofs1)
   // val_type_list | [ofs1, ofs2)
@@ -276,34 +275,34 @@ impl FunType {
   // ofs2 = len
 
   #[inline(always)]
-  fn ofs0(&self) -> usize { let _ = self; 4 }
+  fn ofs0(self) -> usize { let _ = self; 4 }
 
   #[inline(always)]
-  fn ofs1(&self) -> usize { self.0.get_u32(0) as usize }
+  fn ofs1(self) -> usize { self.0.get_u32(0) as usize }
 
   #[inline(always)]
-  fn ofs2(&self) -> usize { self.0.len() }
+  fn ofs2(self) -> usize { self.0.len() }
 
-  pub fn input(&self) -> &ValTypeList {
-    let a = &self.0;
+  pub fn input(self) -> ValTypeList<'a> {
+    let a = self.0;
     let i = self.ofs0();
     let j = self.ofs1();
-    let x = &a[i .. j] as *const [u8] as *const ValTypeList;
-    unsafe { &*x }
+    let x = &a[i .. j];
+    ValTypeList(x)
   }
 
-  pub fn output(&self) -> &ValTypeList {
-    let a = &self.0;
+  pub fn output(self) -> ValTypeList<'a> {
+    let a = self.0;
     let i = self.ofs1();
     let j = self.ofs2();
-    let x = &a[i .. j] as *const [u8] as *const ValTypeList;
-    unsafe { &*x }
+    let x = &a[i .. j];
+    ValTypeList(x)
   }
 }
 
-impl ValTypeList {
-  pub fn iter(&self) -> ValTypeIter<'_> {
-    ValTypeIter(ReadBuf::new(&self.0))
+impl<'a> ValTypeList<'a> {
+  pub fn iter(self) -> ValTypeIter<'a> {
+    ValTypeIter(ReadBuf::new(self.0))
   }
 }
 
@@ -318,9 +317,9 @@ impl<'a> Iterator for ValTypeIter<'a> {
   }
 }
 
-impl VarIdList {
-  pub fn iter(&self) -> VarIdIter<'_> {
-    VarIdIter(ReadBuf::new(&self.0))
+impl<'a> VarIdList<'a> {
+  pub fn iter(self) -> VarIdIter<'a> {
+    VarIdIter(ReadBuf::new(self.0))
   }
 }
 
@@ -335,9 +334,9 @@ impl<'a> Iterator for VarIdIter<'a> {
   }
 }
 
-impl InstList {
-  pub fn iter(&self) -> InstIter<'_> {
-    InstIter(ReadBuf::new(&self.0))
+impl<'a> InstList<'a> {
+  pub fn iter(&self) -> InstIter<'a> {
+    InstIter(ReadBuf::new(self.0))
   }
 }
 
@@ -348,53 +347,33 @@ impl<'a> Iterator for InstIter<'a> {
   fn next(&mut self) -> Option<Self::Item> {
     if self.0.is_empty() { return None; }
 
-    match TagInst::decode(self.0.pop_u8()).unwrap() {
+    let t = self.0.pop_u8();
+
+    match TagInst::decode(t).unwrap() {
       TagInst::Block => {
         let n = self.0.pop_u16() as usize;
-        let x = self.0.pop_slice(n) as *const [u8] as *const ValTypeList;
 
-        Some(Inst::Block(unsafe { &*x }))
+        Some(Inst::Block(ValTypeList(self.0.pop_slice(n))))
       }
       TagInst::If100 => {
-        let x = self.0.pop_array() as *const [u8; 6] as *const If100;
-
-        Some(Inst::If100(unsafe { &*x }))
+        Some(Inst::If100(If100(self.0.pop_array())))
       }
-      /*
       TagInst::If200 => {
-        // tag_if100 u8
-        // var_id    u16
-        // var_id    u16
-        // block_id  u16
-        // block_id  u16
-
-        let i = 1;
-        let j = 10;
-        let x = &a[i .. j] as *const [u8] as *const If200;
-        let y = &a[j ..];
-
-        (Inst::If200(unsafe { &*x }), y)
+        Some(Inst::If200(If200(self.0.pop_array())))
       }
       TagInst::Jump => {
-        // count     u16
-        // block_id  u16
-        // var_id    u16[]
+        let n = self.0.pop_u16() as usize;
+        let n = 2 + 2 * n;
 
-        let n = a.get_u16(1) as usize;
-        let i = 3;
-        let j = 3 + 2 + 2 * n;
-        let x = &a[i .. j] as *const [u8] as *const Jump;
-        let y = &a[j ..];
-
-        (Inst::Jump(unsafe { &*x }), y)
+        Some(Inst::Jump(Jump(self.0.pop_slice(n))))
       }
-      */
       _ => {
         unimplemented!()
       }
     }
   }
 }
+/*
 
 impl If100 {
   const OFS0: usize = 0;
@@ -437,6 +416,7 @@ impl If200 {
   #[inline(always)]
   pub fn block_id_1(&self) -> BlockId { BlockId(self.0.get_u16(Self::OFS4)) }
 }
+*/
 
 impl ValType {
   #[inline(always)]
