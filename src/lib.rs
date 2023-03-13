@@ -9,8 +9,10 @@
 
 mod prelude;
 pub mod backend;
+pub mod buf;
 pub mod bytecode;
-pub mod bc;
+pub mod c;
+pub mod slice_ext;
 
 use crate::prelude::*;
 
