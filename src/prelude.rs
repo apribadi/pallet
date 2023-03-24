@@ -1,4 +1,5 @@
 pub(crate) use crate::buf::*;
+pub(crate) use crate::op::*;
 pub(crate) use crate::bytecode;
 pub(crate) use crate::slice_ext::*;
 
@@ -20,6 +21,7 @@ pub(crate) mod cranelift {
   pub(crate) use cranelift_codegen::ir::InstBuilder;
   pub(crate) use cranelift_codegen::ir::Type;
   pub(crate) use cranelift_codegen::ir::condcodes::IntCC;
+  pub(crate) use cranelift_codegen::ir::types::I128;
   pub(crate) use cranelift_codegen::ir::types::I64;
   pub(crate) use cranelift_codegen::ir::types::I8;
   pub(crate) use cranelift_codegen::isa::CallConv;

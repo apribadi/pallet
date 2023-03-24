@@ -8,6 +8,7 @@ use crate::prelude::*;
 fn compile_valtype(ty: bytecode::ValType) -> cranelift::Type {
   match ty {
     bytecode::ValType::Bool => cranelift::I8,
+    bytecode::ValType::I128 => cranelift::I128,
     bytecode::ValType::I6 => cranelift::I8,
     bytecode::ValType::I64 => cranelift::I64,
     _ => unimplemented!(),
@@ -160,23 +161,25 @@ pub fn compile<'a>(program: bytecode::Program<'a>) -> Box<[u8]> {
           let x = vars[usize::from(x)];
           let u =
             match tag {
-              bytecode::TagOp11::BoolNot =>
+              Op11::BoolNot =>
                 fb.ins().bxor_imm(x, 1),
-              bytecode::TagOp11::I64BitNot =>
+              Op11::I64Abs =>
+                fb.ins().iabs(x),
+              Op11::I64BitNot =>
                 fb.ins().bnot(x),
-              bytecode::TagOp11::I64Clz =>
+              Op11::I64Clz =>
                 fb.ins().clz(x),
-              bytecode::TagOp11::I64Ctz =>
+              Op11::I64Ctz =>
                 fb.ins().ctz(x),
-              bytecode::TagOp11::I64IsNonZero =>
+              Op11::I64IsNonZero =>
                 fb.ins().icmp_imm(cranelift::IntCC::NotEqual, x, 0),
-              bytecode::TagOp11::I64Neg =>
+              Op11::I64Neg =>
                 fb.ins().ineg(x),
-              bytecode::TagOp11::I64Popcount =>
+              Op11::I64Popcount =>
                 fb.ins().popcnt(x),
-              bytecode::TagOp11::I64Swap =>
+              Op11::I64Swap =>
                 fb.ins().bswap(x),
-              bytecode::TagOp11::I64ToI6 =>
+              Op11::I64ToI6 =>
                 fb.ins().ireduce(cranelift::I8, x),
             };
           vars.push(u);
@@ -186,87 +189,80 @@ pub fn compile<'a>(program: bytecode::Program<'a>) -> Box<[u8]> {
           let y = vars[usize::from(y)];
           let u =
             match tag {
-              bytecode::TagOp21::BoolAnd =>
+              Op21::BoolAnd =>
                 fb.ins().band(x, y),
-              bytecode::TagOp21::BoolEq =>
+              Op21::BoolEq =>
                 fb.ins().icmp(cranelift::IntCC::Equal, x, y),
-              bytecode::TagOp21::BoolNeq =>
+              Op21::BoolNeq =>
                 fb.ins().icmp(cranelift::IntCC::NotEqual, x, y),
-              bytecode::TagOp21::BoolOr =>
+              Op21::BoolOr =>
                 fb.ins().bor(x, y),
-              bytecode::TagOp21::I64Add =>
+              Op21::I64Add =>
                 fb.ins().iadd(x, y),
-              bytecode::TagOp21::I64BitAnd =>
+              Op21::I64BitAnd =>
                 fb.ins().band(x, y),
-              bytecode::TagOp21::I64BitOr =>
+              Op21::I64BitOr =>
                 fb.ins().bor(x, y),
-              bytecode::TagOp21::I64BitXor =>
+              Op21::I64BitXor =>
                 fb.ins().bxor(x, y),
-              bytecode::TagOp21::I64IsEq =>
+              Op21::I64IsEq =>
                 fb.ins().icmp(cranelift::IntCC::Equal, x, y),
-              bytecode::TagOp21::I64IsGeS =>
+              Op21::I64IsGeS =>
                 fb.ins().icmp(cranelift::IntCC::SignedGreaterThanOrEqual, x, y),
-              bytecode::TagOp21::I64IsGeU =>
+              Op21::I64IsGeU =>
                 fb.ins().icmp(cranelift::IntCC::UnsignedGreaterThanOrEqual, x, y),
-              bytecode::TagOp21::I64IsGtS =>
+              Op21::I64IsGtS =>
                 fb.ins().icmp(cranelift::IntCC::SignedGreaterThan, x, y),
-              bytecode::TagOp21::I64IsGtU =>
+              Op21::I64IsGtU =>
                 fb.ins().icmp(cranelift::IntCC::UnsignedGreaterThan, x, y),
-              bytecode::TagOp21::I64IsLeS =>
+              Op21::I64IsLeS =>
                 fb.ins().icmp(cranelift::IntCC::SignedLessThanOrEqual, x, y),
-              bytecode::TagOp21::I64IsLeU =>
+              Op21::I64IsLeU =>
                 fb.ins().icmp(cranelift::IntCC::UnsignedLessThanOrEqual, x, y),
-              bytecode::TagOp21::I64IsLtS =>
+              Op21::I64IsLtS =>
                 fb.ins().icmp(cranelift::IntCC::SignedLessThan, x, y),
-              bytecode::TagOp21::I64IsLtU =>
+              Op21::I64IsLtU =>
                 fb.ins().icmp(cranelift::IntCC::UnsignedLessThan, x, y),
-              bytecode::TagOp21::I64IsNeq =>
+              Op21::I64IsNeq =>
                 fb.ins().icmp(cranelift::IntCC::NotEqual, x, y),
-              bytecode::TagOp21::I64MaxS =>
+              Op21::I64MaxS =>
                 fb.ins().smax(x, y),
-              bytecode::TagOp21::I64MaxU =>
+              Op21::I64MaxU =>
                 fb.ins().umax(x, y),
-              bytecode::TagOp21::I64MinS =>
+              Op21::I64MinS =>
                 fb.ins().smin(x, y),
-              bytecode::TagOp21::I64MinU =>
+              Op21::I64MinU =>
                 fb.ins().umin(x, y),
-              bytecode::TagOp21::I64Mul =>
+              Op21::I64Mul =>
                 fb.ins().imul(x, y),
-              bytecode::TagOp21::I64MulHiS =>
+              Op21::I64MulFullS => {
+                let a = fb.ins().sextend(cranelift::I128, x);
+                let b = fb.ins().sextend(cranelift::I128, y);
+                fb.ins().imul(a, b)
+              }
+              Op21::I64MulFullU => {
+                let a = fb.ins().uextend(cranelift::I128, x);
+                let b = fb.ins().uextend(cranelift::I128, y);
+                fb.ins().imul(a, b)
+              }
+              Op21::I64MulHiS =>
                 fb.ins().smulhi(x, y),
-              bytecode::TagOp21::I64MulHiU =>
+              Op21::I64MulHiU =>
                 fb.ins().umulhi(x, y),
-              bytecode::TagOp21::I64Rol =>
+              Op21::I64Rol =>
                 fb.ins().rotl(x, y),
-              bytecode::TagOp21::I64Ror =>
+              Op21::I64Ror =>
                 fb.ins().rotr(x, y),
-              bytecode::TagOp21::I64Shl =>
+              Op21::I64Shl =>
                 fb.ins().ishl(x, y),
-              bytecode::TagOp21::I64ShrS =>
+              Op21::I64ShrS =>
                 fb.ins().sshr(x, y),
-              bytecode::TagOp21::I64ShrU =>
+              Op21::I64ShrU =>
                 fb.ins().ushr(x, y),
-              bytecode::TagOp21::I64Sub =>
+              Op21::I64Sub =>
                 fb.ins().isub(x, y),
             };
           vars.push(u);
-        }
-        bytecode::Inst::Op22(tag, x, y) => {
-          let x = vars[usize::from(x)];
-          let y = vars[usize::from(y)];
-          let [u, v] =
-            match tag {
-              bytecode::TagOp22::I64MulFullS => [
-                fb.ins().imul(x, y),
-                fb.ins().smulhi(x, y),
-              ],
-              bytecode::TagOp22::I64MulFullU => [
-                fb.ins().imul(x, y),
-                fb.ins().umulhi(x, y),
-              ]
-            };
-          vars.push(u);
-          vars.push(v);
         }
         bytecode::Inst::Op31(tag, x, y, z) => {
           let x = vars[usize::from(x)];
@@ -274,7 +270,7 @@ pub fn compile<'a>(program: bytecode::Program<'a>) -> Box<[u8]> {
           let z = vars[usize::from(z)];
           let u =
             match tag {
-              bytecode::TagOp31::I64Sel =>
+              Op31::I64Sel =>
                 fb.ins().select(x, y, z),
             };
           vars.push(u);

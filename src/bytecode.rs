@@ -31,72 +31,10 @@ pub struct BlockId(pub u16);
 pub enum ValType {
   Bool,
   FunRef,
+  I128,
   I6,
   I64,
   Ref,
-}
-
-#[derive(Clone, Copy, Eq, PartialEq)]
-#[repr(u8)]
-pub enum TagOp11 {
-  BoolNot,
-  I64BitNot,
-  I64Clz,
-  I64Ctz,
-  I64IsNonZero,
-  I64Neg,
-  I64Popcount,
-  I64Swap,
-  I64ToI6,
-}
-
-#[derive(Clone, Copy, Eq, PartialEq)]
-#[repr(u8)]
-pub enum TagOp21 {
-  BoolAnd,
-  BoolEq,
-  BoolNeq,
-  BoolOr,
-  I64Add,
-  I64BitAnd,
-  I64BitOr,
-  I64BitXor,
-  I64IsEq,
-  I64IsGeS,
-  I64IsGeU,
-  I64IsGtS,
-  I64IsGtU,
-  I64IsLeS,
-  I64IsLeU,
-  I64IsLtS,
-  I64IsLtU,
-  I64IsNeq,
-  I64MaxS,
-  I64MaxU,
-  I64MinS,
-  I64MinU,
-  I64Mul,
-  I64MulHiS,
-  I64MulHiU,
-  I64Rol,
-  I64Ror,
-  I64Shl,
-  I64ShrS,
-  I64ShrU,
-  I64Sub,
-}
-
-#[derive(Clone, Copy, Eq, PartialEq)]
-#[repr(u8)]
-pub enum TagOp22 {
-  I64MulFullS,
-  I64MulFullU,
-}
-
-#[derive(Clone, Copy, Eq, PartialEq)]
-#[repr(u8)]
-pub enum TagOp31 {
-  I64Sel,
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
@@ -139,10 +77,9 @@ pub enum Inst<'a> {
   If100(TagIf100, VarId, BlockId, BlockId),
   If200(TagIf200, VarId, VarId, BlockId, BlockId),
   Jump(BlockId, &'a [VarId]),
-  Op11(TagOp11, VarId),
-  Op21(TagOp21, VarId, VarId),
-  Op22(TagOp22, VarId, VarId),
-  Op31(TagOp31, VarId, VarId, VarId),
+  Op11(Op11, VarId),
+  Op21(Op21, VarId, VarId),
+  Op31(Op31, VarId, VarId, VarId),
   Return(&'a [VarId]),
 }
 
@@ -153,25 +90,19 @@ impl From<VarId> for usize {
   }
 }
 
-impl TagOp11 {
+impl Op11 {
   pub fn types(self) -> ([ValType; 1], [ValType; 1]) {
     TYPE_OP_11[self as u8 as usize]
   }
 }
 
-impl TagOp21 {
+impl Op21 {
   pub fn types(self) -> ([ValType; 2], [ValType; 1]) {
     TYPE_OP_21[self as usize]
   }
 }
 
-impl TagOp22 {
-  pub fn types(self) -> ([ValType; 2], [ValType; 2]) {
-    TYPE_OP_22[self as u8 as usize]
-  }
-}
-
-impl TagOp31 {
+impl Op31 {
   pub fn types(self) -> ([ValType; 3], [ValType; 1]) {
     TYPE_OP_31[self as usize]
   }
@@ -185,9 +116,10 @@ impl TagOp31 {
 
 use ValType::*;
 
-pub(crate) static TYPE_OP_11: [([ValType; 1], [ValType; 1]); 9] = [
+pub(crate) static TYPE_OP_11: [([ValType; 1], [ValType; 1]); 10] = [
   /* BoolNot      */ ([Bool], [Bool]),
   /* I64BitNot    */ ([I64], [I64]),
+  /* I64Abs       */ ([I64], [I64]),
   /* I64Clz       */ ([I64], [I64]),
   /* I64Ctz       */ ([I64], [I64]),
   /* I64IsNonZero */ ([I64], [Bool]),
@@ -197,7 +129,7 @@ pub(crate) static TYPE_OP_11: [([ValType; 1], [ValType; 1]); 9] = [
   /* I64ToI6      */ ([I64], [I6]),
 ];
 
-pub(crate) static TYPE_OP_21: [([ValType; 2], [ValType; 1]); 31] = [
+pub(crate) static TYPE_OP_21: [([ValType; 2], [ValType; 1]); 33] = [
   /* BoolAnd      */ ([Bool, Bool], [Bool]),
   /* BoolEq       */ ([Bool, Bool], [Bool]),
   /* BoolNeq      */ ([Bool, Bool], [Bool]),
@@ -221,6 +153,8 @@ pub(crate) static TYPE_OP_21: [([ValType; 2], [ValType; 1]); 31] = [
   /* I64MinS      */ ([I64, I64], [I64]),
   /* I64MinU      */ ([I64, I64], [I64]),
   /* I64Mul       */ ([I64, I64], [I64]),
+  /* I64MulFullS  */ ([I64, I64], [I128]),
+  /* I64MulFullU  */ ([I64, I64], [I128]),
   /* I64MulHiS    */ ([I64, I64], [I64]),
   /* I64MulHiU    */ ([I64, I64], [I64]),
   /* I64Rol       */ ([I64, I6], [I64]),
@@ -229,11 +163,6 @@ pub(crate) static TYPE_OP_21: [([ValType; 2], [ValType; 1]); 31] = [
   /* I64ShrS      */ ([I64, I6], [I64]),
   /* I64ShrU      */ ([I64, I6], [I64]),
   /* I64Sub       */ ([I64, I64], [I64]),
-];
-
-pub(crate) static TYPE_OP_22: [([ValType; 2], [ValType; 2]); 2] = [
-  /* I64MulFullS  */ ([I64, I64], [I64, I64]),
-  /* I64MulFullU  */ ([I64, I64], [I64, I64]),
 ];
 
 pub(crate) static TYPE_OP_31: [([ValType; 3], [ValType; 1]); 1] = [

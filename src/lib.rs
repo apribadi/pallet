@@ -12,6 +12,7 @@ pub mod backend;
 pub mod buf;
 pub mod bytecode;
 pub mod c;
+pub mod op;
 pub mod slice_ext;
 
 use crate::prelude::*;
@@ -41,11 +42,11 @@ pub fn go() {
             Inst::Const(Imm::I64(13)),
             Inst::Jump(BlockId(0), &[VarId(1), VarId(0)]),
             Inst::Block(&[ValType::I64, ValType::I64]),
-            Inst::Op11(TagOp11::I64Neg, VarId(3)),
-            Inst::Op21(TagOp21::I64Add, VarId(3), VarId(4)),
-            Inst::Op11(TagOp11::I64IsNonZero, VarId(0)),
-            Inst::Op11(TagOp11::I64ToI6, VarId(1)),
-            Inst::Op21(TagOp21::I64Ror, VarId(0), VarId(8)),
+            Inst::Op11(Op11::I64Neg, VarId(3)),
+            Inst::Op21(Op21::I64Add, VarId(3), VarId(4)),
+            Inst::Op11(Op11::I64IsNonZero, VarId(0)),
+            Inst::Op11(Op11::I64ToI6, VarId(1)),
+            Inst::Op21(Op21::I64Ror, VarId(0), VarId(8)),
             Inst::Return(
               &[
                 VarId(4),
