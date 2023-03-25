@@ -1,3 +1,4 @@
+#![allow(non_camel_case_types)]
 #![deny(unsafe_op_in_unsafe_fn)]
 #![warn(elided_lifetimes_in_paths)]
 #![warn(non_ascii_idents)]
@@ -15,6 +16,7 @@ pub mod ir_bytecode;
 pub mod ir_op;
 pub mod ir_ty;
 pub mod slice_ext;
+pub mod u6;
 
 use crate::prelude::*;
 

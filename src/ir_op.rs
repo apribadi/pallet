@@ -13,7 +13,8 @@ pub enum Op11 {
   I64IsNonZero,
   I64Neg,
   I64Popcount,
-  I64Swap,
+  I64RevBits,
+  I64RevBytes,
   I64ToI6,
 }
 

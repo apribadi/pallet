@@ -172,7 +172,9 @@ pub fn compile<'a>(program: bytecode::Program<'a>) -> Box<[u8]> {
                 fb.ins().ineg(x),
               Op11::I64Popcount =>
                 fb.ins().popcnt(x),
-              Op11::I64Swap =>
+              Op11::I64RevBits =>
+                fb.ins().bitrev(x),
+              Op11::I64RevBytes =>
                 fb.ins().bswap(x),
               Op11::I64ToI6 =>
                 fb.ins().ireduce(cranelift::I8, x),

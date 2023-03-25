@@ -3,7 +3,10 @@ pub(crate) use crate::bytecode;
 pub(crate) use crate::ir_op::*;
 pub(crate) use crate::ir_ty::*;
 pub(crate) use crate::slice_ext::*;
+pub(crate) use crate::u6::*;
 
+pub(crate) use oxcart::Allocator;
+pub(crate) use oxcart::Arena;
 pub(crate) use std::fs::File;
 pub(crate) use std::io::Write;
 pub(crate) use std::sync::Arc;
@@ -59,20 +62,6 @@ where
 #[inline(always)]
 pub(crate) const fn max(x: usize, y: usize) -> usize {
   if x >= y { x } else { y }
-}
-
-#[derive(Clone, Copy, Eq, Ord, PartialEq, PartialOrd)]
-#[allow(non_camel_case_types)]
-pub struct u6(u8);
-
-impl From<u8> for u6 {
-  #[inline(always)]
-  fn from(x: u8) -> Self { Self(x & 0x3f) }
-}
-
-impl From<u6> for u8 {
-  #[inline(always)]
-  fn from(x: u6) -> Self { x.0 }
 }
 
 pub(crate) trait BytesExt {

@@ -88,7 +88,8 @@ pub(crate) static TYPE_OP_11: &[([Ty; 1], [Ty; 1])] = &[
   /* I64IsNonZero */ ([I64], [Bool]),
   /* I64Neg       */ ([I64], [I64]),
   /* I64Popcount  */ ([I64], [I64]),
-  /* I64Swap      */ ([I64], [I64]),
+  /* I64RevBits   */ ([I64], [I64]),
+  /* I64RevBytes  */ ([I64], [I64]),
   /* I64ToI6      */ ([I64], [I6]),
 ];
 
