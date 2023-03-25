@@ -11,8 +11,8 @@ mod prelude;
 pub mod backend;
 pub mod buf;
 pub mod bytecode;
-pub mod c;
-pub mod op;
+pub mod ir_bytecode;
+pub mod ir_op;
 pub mod slice_ext;
 
 use crate::prelude::*;

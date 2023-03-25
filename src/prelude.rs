@@ -1,5 +1,5 @@
 pub(crate) use crate::buf::*;
-pub(crate) use crate::op::*;
+pub(crate) use crate::ir_op::*;
 pub(crate) use crate::bytecode;
 pub(crate) use crate::slice_ext::*;
 

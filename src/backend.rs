@@ -132,7 +132,7 @@ pub fn compile<'a>(program: bytecode::Program<'a>) -> Box<[u8]> {
             };
           vars.push(u);
         }
-        bytecode::Inst::If100(tag, x, a, b) => {
+        bytecode::Inst::If(x, a, b) => {
           let a = a.0 as usize;
           let b = b.0 as usize;
           let n = max(a, b) + 1;
@@ -140,15 +140,7 @@ pub fn compile<'a>(program: bytecode::Program<'a>) -> Box<[u8]> {
           let a = blocks[a];
           let b = blocks[b];
           let x = vars[usize::from(x)];
-
-          match tag {
-            bytecode::TagIf100::BoolIsTrue => {
-              let _: _ = fb.ins().brif(x, a, &[], b, &[]);
-            }
-            bytecode::TagIf100::I64IsNonZero => {
-              let _: _ = fb.ins().brif(x, a, &[], b, &[]);
-            }
-          }
+          let _: _ = fb.ins().brif(x, a, &[], b, &[]);
         }
         bytecode::Inst::Jump(a, xs) => {
           let a = a.0 as usize;
@@ -163,6 +155,12 @@ pub fn compile<'a>(program: bytecode::Program<'a>) -> Box<[u8]> {
             match tag {
               Op11::BoolNot =>
                 fb.ins().bxor_imm(x, 1),
+              Op11::I128HiI64 => {
+                let a = fb.ins().ushr_imm(x, 64);
+                fb.ins().ireduce(cranelift::I64, a)
+              }
+              Op11::I128ToI64 =>
+                fb.ins().ireduce(cranelift::I64, x),
               Op11::I64Abs =>
                 fb.ins().iabs(x),
               Op11::I64BitNot =>
@@ -236,14 +234,14 @@ pub fn compile<'a>(program: bytecode::Program<'a>) -> Box<[u8]> {
               Op21::I64Mul =>
                 fb.ins().imul(x, y),
               Op21::I64MulFullS => {
-                let a = fb.ins().sextend(cranelift::I128, x);
-                let b = fb.ins().sextend(cranelift::I128, y);
-                fb.ins().imul(a, b)
+                let a = fb.ins().imul(x, y);
+                let b = fb.ins().smulhi(x, y);
+                fb.ins().iconcat(a, b)
               }
               Op21::I64MulFullU => {
-                let a = fb.ins().uextend(cranelift::I128, x);
-                let b = fb.ins().uextend(cranelift::I128, y);
-                fb.ins().imul(a, b)
+                let a = fb.ins().imul(x, y);
+                let b = fb.ins().umulhi(x, y);
+                fb.ins().iconcat(a, b)
               }
               Op21::I64MulHiS =>
                 fb.ins().smulhi(x, y),

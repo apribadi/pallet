@@ -37,28 +37,6 @@ pub enum ValType {
   Ref,
 }
 
-#[derive(Clone, Copy, Eq, PartialEq)]
-#[repr(u8)]
-pub enum TagIf100 {
-  BoolIsTrue,
-  I64IsNonZero,
-}
-
-#[derive(Clone, Copy, Eq, PartialEq)]
-#[repr(u8)]
-pub enum TagIf200 {
-  I64IsEq,
-  I64IsGeS,
-  I64IsGeU,
-  I64IsGtS,
-  I64IsGtU,
-  I64IsLeS,
-  I64IsLeU,
-  I64IsLtS,
-  I64IsLtU,
-  I64IsNeq,
-}
-
 #[derive(Clone, Copy)]
 pub enum Imm {
   Bool(bool),
@@ -74,8 +52,7 @@ pub enum Inst<'a> {
   FunCallIndirect,
   FunTailCall,
   FunTailCallIndirect,
-  If100(TagIf100, VarId, BlockId, BlockId),
-  If200(TagIf200, VarId, VarId, BlockId, BlockId),
+  If(VarId, BlockId, BlockId),
   Jump(BlockId, &'a [VarId]),
   Op11(Op11, VarId),
   Op21(Op21, VarId, VarId),
@@ -116,10 +93,12 @@ impl Op31 {
 
 use ValType::*;
 
-pub(crate) static TYPE_OP_11: [([ValType; 1], [ValType; 1]); 10] = [
+pub(crate) static TYPE_OP_11: [([ValType; 1], [ValType; 1]); 12] = [
   /* BoolNot      */ ([Bool], [Bool]),
-  /* I64BitNot    */ ([I64], [I64]),
+  /* I128HiI64    */ ([I128], [I64]),
+  /* I128ToI64    */ ([I128], [I64]),
   /* I64Abs       */ ([I64], [I64]),
+  /* I64BitNot    */ ([I64], [I64]),
   /* I64Clz       */ ([I64], [I64]),
   /* I64Ctz       */ ([I64], [I64]),
   /* I64IsNonZero */ ([I64], [Bool]),

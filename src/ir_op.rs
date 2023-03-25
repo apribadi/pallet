@@ -4,8 +4,10 @@
 #[repr(u8)]
 pub enum Op11 {
   BoolNot,
-  I64BitNot,
+  I128HiI64,
+  I128ToI64,
   I64Abs,
+  I64BitNot,
   I64Clz,
   I64Ctz,
   I64IsNonZero,
