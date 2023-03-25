@@ -1,6 +1,7 @@
 pub(crate) use crate::buf::*;
-pub(crate) use crate::ir_op::*;
 pub(crate) use crate::bytecode;
+pub(crate) use crate::ir_op::*;
+pub(crate) use crate::ir_ty::*;
 pub(crate) use crate::slice_ext::*;
 
 pub(crate) use std::fs::File;

@@ -5,13 +5,12 @@ use crate::prelude::*;
 // bool -> i8, either 0x00 or 0x01
 // i6   -> i8, with the two MSBs *unspecified*
 
-fn compile_valtype(ty: bytecode::ValType) -> cranelift::Type {
+fn compile_valtype(ty: Ty) -> cranelift::Type {
   match ty {
-    bytecode::ValType::Bool => cranelift::I8,
-    bytecode::ValType::I128 => cranelift::I128,
-    bytecode::ValType::I6 => cranelift::I8,
-    bytecode::ValType::I64 => cranelift::I64,
-    _ => unimplemented!(),
+    Ty::Bool => cranelift::I8,
+    Ty::I128 => cranelift::I128,
+    Ty::I6 => cranelift::I8,
+    Ty::I64 => cranelift::I64,
   }
 }
 
@@ -120,17 +119,12 @@ pub fn compile<'a>(program: bytecode::Program<'a>) -> Box<[u8]> {
             vars.push(fb.append_block_param(block, compile_valtype(ty)));
           }
         }
-        bytecode::Inst::Const(imm) => {
-          let u =
-            match imm {
-              bytecode::Imm::Bool(x) =>
-                fb.ins().iconst(cranelift::I8, u8::from(x) as i64),
-              bytecode::Imm::I6(x) =>
-                fb.ins().iconst(cranelift::I8, u8::from(x) as i64),
-              bytecode::Imm::I64(x) =>
-                fb.ins().iconst(cranelift::I64, x as i64),
-            };
-          vars.push(u);
+        bytecode::Inst::Goto(a, xs) => {
+          let a = a.0 as usize;
+          while blocks.len() < a + 1 { blocks.push(fb.create_block()); }
+          let a = blocks[a];
+
+          let _: _ = fb.ins().jump(a, &map_slice(xs, |&x| vars[usize::from(x)]));
         }
         bytecode::Inst::If(x, a, b) => {
           let a = a.0 as usize;
@@ -142,12 +136,17 @@ pub fn compile<'a>(program: bytecode::Program<'a>) -> Box<[u8]> {
           let x = vars[usize::from(x)];
           let _: _ = fb.ins().brif(x, a, &[], b, &[]);
         }
-        bytecode::Inst::Jump(a, xs) => {
-          let a = a.0 as usize;
-          while blocks.len() < a + 1 { blocks.push(fb.create_block()); }
-          let a = blocks[a];
-
-          let _: _ = fb.ins().jump(a, &map_slice(xs, |&x| vars[usize::from(x)]));
+        bytecode::Inst::ImmBool(imm) => {
+          let u = fb.ins().iconst(cranelift::I8, u8::from(imm) as i64);
+          vars.push(u)
+        }
+        bytecode::Inst::ImmI6(imm) => {
+          let u = fb.ins().iconst(cranelift::I8, u8::from(imm) as i64);
+          vars.push(u)
+        }
+        bytecode::Inst::ImmI64(imm) => {
+          let u = fb.ins().iconst(cranelift::I8, imm as i64);
+          vars.push(u)
         }
         bytecode::Inst::Op11(tag, x) => {
           let x = vars[usize::from(x)];
@@ -155,10 +154,8 @@ pub fn compile<'a>(program: bytecode::Program<'a>) -> Box<[u8]> {
             match tag {
               Op11::BoolNot =>
                 fb.ins().bxor_imm(x, 1),
-              Op11::I128HiI64 => {
-                let a = fb.ins().ushr_imm(x, 64);
-                fb.ins().ireduce(cranelift::I64, a)
-              }
+              Op11::I128HiI64 =>
+                fb.ins().isplit(x).1,
               Op11::I128ToI64 =>
                 fb.ins().ireduce(cranelift::I64, x),
               Op11::I64Abs =>
@@ -273,7 +270,7 @@ pub fn compile<'a>(program: bytecode::Program<'a>) -> Box<[u8]> {
             };
           vars.push(u);
         }
-        bytecode::Inst::Return(xs) => {
+        bytecode::Inst::Ret(xs) => {
           let _: _ = fb.ins().return_(&map_slice(xs, |&x| vars[usize::from(x)]));
         }
         _ => unimplemented!()

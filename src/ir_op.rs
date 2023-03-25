@@ -1,6 +1,6 @@
-// use crate::prelude::*;
+use crate::prelude::*;
 
-#[derive(Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, Copy, Eq, PartialEq, VariantCount)]
 #[repr(u8)]
 pub enum Op11 {
   BoolNot,
@@ -17,13 +17,7 @@ pub enum Op11 {
   I64ToI6,
 }
 
-#[derive(Clone, Copy, Eq, PartialEq)]
-#[repr(u8)]
-pub enum Op12 {
-  I128ToI64x2,
-}
-
-#[derive(Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, Copy, Eq, PartialEq, VariantCount)]
 #[repr(u8)]
 pub enum Op21 {
   BoolAnd,
@@ -61,7 +55,7 @@ pub enum Op21 {
   I64Sub,
 }
 
-#[derive(Clone, Copy, Eq, PartialEq)]
+#[derive(Clone, Copy, Eq, PartialEq, VariantCount)]
 #[repr(u8)]
 pub enum Op31 {
   I64Sel,

@@ -7,8 +7,8 @@ pub struct Program<'a> {
 
 #[derive(Clone, Copy)]
 pub struct Signature<'a> {
-  pub inputs: &'a [ValType],
-  pub outputs: &'a [ValType],
+  pub inputs: &'a [Ty],
+  pub outputs: &'a [Ty],
 }
 
 #[derive(Clone, Copy)]
@@ -26,38 +26,22 @@ pub struct VarId(pub u16);
 #[repr(transparent)]
 pub struct BlockId(pub u16);
 
-#[derive(Clone, Copy, Eq, PartialEq)]
-#[repr(u8)]
-pub enum ValType {
-  Bool,
-  FunRef,
-  I128,
-  I6,
-  I64,
-  Ref,
-}
-
-#[derive(Clone, Copy)]
-pub enum Imm {
-  Bool(bool),
-  I6(u6),
-  I64(u64),
-}
-
 #[derive(Clone, Copy)]
 pub enum Inst<'a> {
-  Block(&'a [ValType]),
-  Const(Imm),
+  Block(&'a [Ty]),
   FunCall,
   FunCallIndirect,
   FunTailCall,
   FunTailCallIndirect,
+  Goto(BlockId, &'a [VarId]),
   If(VarId, BlockId, BlockId),
-  Jump(BlockId, &'a [VarId]),
+  ImmBool(bool),
+  ImmI6(u6),
+  ImmI64(u64),
   Op11(Op11, VarId),
   Op21(Op21, VarId, VarId),
   Op31(Op31, VarId, VarId, VarId),
-  Return(&'a [VarId]),
+  Ret(&'a [VarId]),
 }
 
 impl From<VarId> for usize {
@@ -68,19 +52,19 @@ impl From<VarId> for usize {
 }
 
 impl Op11 {
-  pub fn types(self) -> ([ValType; 1], [ValType; 1]) {
+  pub fn types(self) -> ([Ty; 1], [Ty; 1]) {
     TYPE_OP_11[self as u8 as usize]
   }
 }
 
 impl Op21 {
-  pub fn types(self) -> ([ValType; 2], [ValType; 1]) {
+  pub fn types(self) -> ([Ty; 2], [Ty; 1]) {
     TYPE_OP_21[self as usize]
   }
 }
 
 impl Op31 {
-  pub fn types(self) -> ([ValType; 3], [ValType; 1]) {
+  pub fn types(self) -> ([Ty; 3], [Ty; 1]) {
     TYPE_OP_31[self as usize]
   }
 }
@@ -91,9 +75,9 @@ impl Op31 {
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-use ValType::*;
+use Ty::*;
 
-pub(crate) static TYPE_OP_11: [([ValType; 1], [ValType; 1]); 12] = [
+pub(crate) static TYPE_OP_11: &[([Ty; 1], [Ty; 1])] = &[
   /* BoolNot      */ ([Bool], [Bool]),
   /* I128HiI64    */ ([I128], [I64]),
   /* I128ToI64    */ ([I128], [I64]),
@@ -108,7 +92,7 @@ pub(crate) static TYPE_OP_11: [([ValType; 1], [ValType; 1]); 12] = [
   /* I64ToI6      */ ([I64], [I6]),
 ];
 
-pub(crate) static TYPE_OP_21: [([ValType; 2], [ValType; 1]); 33] = [
+pub(crate) static TYPE_OP_21: &[([Ty; 2], [Ty; 1])] = &[
   /* BoolAnd      */ ([Bool, Bool], [Bool]),
   /* BoolEq       */ ([Bool, Bool], [Bool]),
   /* BoolNeq      */ ([Bool, Bool], [Bool]),
@@ -144,6 +128,6 @@ pub(crate) static TYPE_OP_21: [([ValType; 2], [ValType; 1]); 33] = [
   /* I64Sub       */ ([I64, I64], [I64]),
 ];
 
-pub(crate) static TYPE_OP_31: [([ValType; 3], [ValType; 1]); 1] = [
+pub(crate) static TYPE_OP_31: &[([Ty; 3], [Ty; 1])] = &[
   /* I64Sel       */ ([Bool, I64, I64], [I64]),
 ];
