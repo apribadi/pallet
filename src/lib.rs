@@ -12,6 +12,8 @@ mod prelude;
 pub mod backend;
 pub mod buf;
 pub mod bytecode;
+pub mod frontend_lexer;
+pub mod frontend_token;
 pub mod ir_bytecode;
 pub mod ir_op;
 pub mod ir_ty;
@@ -21,6 +23,41 @@ pub mod u6;
 use crate::prelude::*;
 
 pub fn go() {
+  let source =
+    b"\
+fun foo(n)
+  let x = n
+  let i = 0
+  # comment
+  while i < 100
+    x = x + i
+    i = i + 1
+  end
+  return x
+end
+\xff
+.
+..
+...
+....
+$$$
+";
+
+  let mut lexer = Lexer::new(source);
+
+  loop {
+    let token = lexer.next();
+
+    if token == Token::EOF { break; }
+
+    print!("{:?}: ", token);
+
+    match str::from_utf8(lexer.span()) {
+      Ok(span) => print!("\"{}\"\n", span),
+      Err(_) => print!("{:?}\n", lexer.span()),
+    }
+  }
+
   use bytecode::*;
 
   let program =
