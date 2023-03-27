@@ -26,9 +26,8 @@ use crate::prelude::*;
 
 pub fn go() {
   let source =
-    b"\
-    - (((f)))(1)(-x)";
-    /*
+    b"- f(x) + g(- y) * h(z)";
+  /*
     b"\
 fun foo(n)
   let x = n
