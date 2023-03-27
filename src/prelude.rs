@@ -1,14 +1,16 @@
 pub(crate) use crate::buf::*;
 pub(crate) use crate::bytecode;
+pub(crate) use crate::frontend_ast::*;
 pub(crate) use crate::frontend_lexer::*;
+pub(crate) use crate::frontend_parser::*;
 pub(crate) use crate::frontend_token::*;
 pub(crate) use crate::ir_op::*;
 pub(crate) use crate::ir_ty::*;
 pub(crate) use crate::slice_ext::*;
 pub(crate) use crate::u6::*;
 
-// pub(crate) use oxcart::Allocator;
-// pub(crate) use oxcart::Arena;
+pub(crate) use oxcart::Allocator;
+pub(crate) use oxcart::Arena;
 pub(crate) use std::array;
 pub(crate) use std::fs::File;
 pub(crate) use std::io::Write;

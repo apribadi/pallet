@@ -13,6 +13,8 @@ pub mod backend;
 pub mod buf;
 pub mod bytecode;
 pub mod frontend_lexer;
+pub mod frontend_parser;
+pub mod frontend_ast;
 pub mod frontend_token;
 pub mod ir_bytecode;
 pub mod ir_op;
@@ -25,6 +27,9 @@ use crate::prelude::*;
 pub fn go() {
   let source =
     b"\
+    - (((f)))(1)(-x)";
+    /*
+    b"\
 fun foo(n)
   let x = n
   let i = 0
@@ -33,7 +38,7 @@ fun foo(n)
     x = x + i
     i = i + 1
   end
-  return x
+  return x + -13
 end
 \xff
 .
@@ -42,7 +47,17 @@ end
 ....
 $$$
 ";
+*/
 
+  let mut arena = Arena::new();
+  let allocator = arena.allocator_mut();
+  let mut parser = Parser::new(source);
+
+  let e = parser.parse_expr(allocator);
+
+  println!("{:#?}", e);
+
+  /*
   let mut lexer = Lexer::new(source);
 
   loop {
@@ -57,6 +72,7 @@ $$$
       Err(_) => print!("{:?}\n", lexer.span()),
     }
   }
+  */
 
   use bytecode::*;
 

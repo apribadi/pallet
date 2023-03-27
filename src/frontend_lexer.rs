@@ -5,7 +5,7 @@ pub struct Lexer<'a> {
   start: usize,
   stop: usize,
   kinds: [Kind; 256],
-  jumps: [[State; Kind::VARIANT_COUNT]; 7],
+  jumps: [[State; Kind::VARIANT_COUNT]; 8],
 }
 
 impl<'a> Lexer<'a> {
@@ -25,6 +25,7 @@ impl<'a> Lexer<'a> {
           State::Symbol,
           State::Operator,
           State::TerminalPunctuation,
+          State::Sign,
           State::Space,
           State::Symbol,
           State::TerminalUnknownCharacter,
@@ -35,6 +36,7 @@ impl<'a> Lexer<'a> {
           State::Comment,
           State::Comment,
           State::Space,
+          State::Comment,
           State::Comment,
           State::Comment,
           State::Comment,
@@ -54,11 +56,13 @@ impl<'a> Lexer<'a> {
           State::TerminalDot,
           State::TerminalDot,
           State::TerminalDot,
+          State::TerminalDot,
         ],
         [
           // Number =>
           State::Number,
           State::Number,
+          State::TerminalNumber,
           State::TerminalNumber,
           State::TerminalNumber,
           State::TerminalNumber,
@@ -77,6 +81,21 @@ impl<'a> Lexer<'a> {
           State::TerminalOperator,
           State::Operator,
           State::TerminalOperator,
+          State::Operator,
+          State::TerminalOperator,
+          State::TerminalOperator,
+          State::TerminalOperator,
+        ],
+        [
+          // Sign =>
+          State::Number,
+          State::TerminalOperator,
+          State::TerminalOperator,
+          State::TerminalOperator,
+          State::TerminalOperator,
+          State::Operator,
+          State::TerminalOperator,
+          State::Operator,
           State::TerminalOperator,
           State::TerminalOperator,
           State::TerminalOperator,
@@ -87,6 +106,7 @@ impl<'a> Lexer<'a> {
           State::TerminalSpace,
           State::Comment,
           State::Space,
+          State::TerminalSpace,
           State::TerminalSpace,
           State::TerminalSpace,
           State::TerminalSpace,
@@ -101,6 +121,7 @@ impl<'a> Lexer<'a> {
           State::TerminalSymbol,
           State::TerminalSymbol,
           State::Symbol,
+          State::TerminalSymbol,
           State::TerminalSymbol,
           State::TerminalSymbol,
           State::TerminalSymbol,
@@ -152,7 +173,7 @@ impl<'a> Lexer<'a> {
         State::Number | State::TerminalNumber => {
           Token::Number
         }
-        State::Operator | State::TerminalOperator => {
+        State::Operator | State::Sign | State::TerminalOperator => {
           match unsafe { buf.get_unchecked(i .. j) } {
             b"=" => Token::Assignment,
             b"==" => Token::Equal,
@@ -239,6 +260,7 @@ enum Kind {
   Letter,
   Operator,
   Punctuation,
+  Sign,
   Space,
   Underscore,
   Unknown,
@@ -258,9 +280,9 @@ impl Kind {
       b'(' => Self::Punctuation,
       b')' => Self::Punctuation,
       b'*' => Self::Operator,
-      b'+' => Self::Operator,
+      b'+' => Self::Sign,
       b',' => Self::Punctuation,
-      b'-' => Self::Operator,
+      b'-' => Self::Sign,
       b'.' => Self::Dot,
       b'/' => Self::Operator,
       b'0' ..= b'9' => Self::Digit,
@@ -294,6 +316,7 @@ enum State {
   Dot,
   Number,
   Operator,
+  Sign,
   Space,
   Symbol,
   TerminalDot,
