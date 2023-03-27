@@ -7,9 +7,9 @@ pub enum Token {
 
   EOF,
   Error,
-  Number,
+  Num,
   Space,
-  Symbol,
+  Sym,
 
   // dots
 
@@ -23,21 +23,21 @@ pub enum Token {
   Comma,
   LBrace,
   LBracket,
-  LParenthesis,
+  LParen,
   RBrace,
   RBracket,
-  RParenthesis,
-  Semicolon,
+  RParen,
+  Semi,
 
   // operators
 
-  Assignment,
-  Equal,
-  NotEqual,
-  GreaterThan,
-  GreaterThanOrEqual,
-  LessThan,
-  LessThanOrEqual,
+  Assign,
+  EQ,
+  NE,
+  GT,
+  GE,
+  LT,
+  LE,
   Ampersand,
   At,
   Bang,

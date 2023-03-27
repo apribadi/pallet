@@ -12,13 +12,14 @@ mod prelude;
 pub mod backend;
 pub mod buf;
 pub mod bytecode;
+pub mod frontend_ast;
 pub mod frontend_lexer;
 pub mod frontend_parser;
-pub mod frontend_ast;
 pub mod frontend_token;
 pub mod ir_bytecode;
 pub mod ir_op;
 pub mod ir_ty;
+pub mod sexp;
 pub mod slice_ext;
 pub mod u6;
 
@@ -52,9 +53,10 @@ $$$
   let allocator = arena.allocator_mut();
   let mut parser = Parser::new(source);
 
-  let e = parser.parse_expr(allocator);
 
-  println!("{:#?}", e);
+  if let Ok(e) = parser.parse_expr(allocator) {
+    println!("{}", e.sexp(allocator));
+  }
 
   /*
   let mut lexer = Lexer::new(source);
