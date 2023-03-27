@@ -34,7 +34,7 @@ impl<'a> Parser<'a> {
     if self.token == token {
       Ok(())
     } else {
-      self.fail()
+      Err(ParseError)
     }
   }
 
@@ -42,43 +42,109 @@ impl<'a> Parser<'a> {
     self.lexer.span()
   }
 
-  pub fn parse_expr<'b>(&mut self, alloc: &mut Allocator<'b>) -> Result<AstExpr<'b>, ParseError> {
-    self.parse_expr_e(alloc)
+  fn is_end_of_block(&self) -> bool {
+    match self.token {
+      Token::End | Token::Elif | Token::Else => true,
+      _ => false
+    }
   }
 
-  // "e"quality
+  pub fn parse_binding<'b>(&mut self, aa: &mut Allocator<'b>) -> Result<&'b str, ParseError> {
+    self.expect(Token::Sym)?;
+    let s = aa.copy_str(str::from_utf8(self.span()).unwrap());
+    self.advance();
+    self.advance_if_space();
+    Ok(s)
+  }
 
-  pub fn parse_expr_e<'b>(&mut self, alloc: &mut Allocator<'b>) -> Result<AstExpr<'b>, ParseError> {
-    let mut e = self.parse_expr_c(alloc)?;
+  pub fn parse_stmt_seq<'b>(
+      &mut self,
+      aa: &mut Allocator<'b>
+    ) -> Result<&'b [AstStmt<'b>], ParseError>
+  {
+    let mut x = Vec::new();
+    while ! self.is_end_of_block() {
+      let s = self.parse_stmt(aa)?;
+      x.push(s);
+    }
+    Ok(aa.copy_slice(x.as_slice()))
+  }
 
-    loop {
-      if let token @ (Token::EQ | Token::NE) = self.token {
-        let op =
-          match token {
-            Token::EQ => "==",
-            Token::NE => "!=",
-            _ => panic!(),
-          };
+  pub fn parse_stmt<'b>(&mut self, aa: &mut Allocator<'b>) -> Result<AstStmt<'b>, ParseError> {
+    match self.token {
+      Token::Break => {
         self.advance();
         self.advance_if_space();
-        let x = self.parse_expr_c(alloc)?;
-        let a = alloc.alloc().init(AstOp(op, [e, x]));
-        e = AstExpr::Op2(a);
-      } else {
-        break;
+        Ok(AstStmt::Break)
+      }
+      Token::Return => {
+        self.advance();
+        self.advance_if_space();
+        Ok(AstStmt::Return)
+      }
+      Token::Let => {
+        self.advance();
+        self.advance_if_space();
+
+        let mut x = Vec::new();
+        let s = self.parse_binding(aa)?;
+        x.push(s);
+        while self.token == Token::Comma {
+          self.advance();
+          self.advance_if_space();
+          let s = self.parse_binding(aa)?;
+          x.push(s);
+        }
+        let x = aa.copy_slice(x.as_slice());
+
+        self.expect(Token::Assign)?;
+        self.advance();
+        self.advance_if_space();
+
+        let mut y = Vec::new();
+        let e = self.parse_expr(aa)?;
+        y.push(e);
+        while self.token == Token::Comma {
+          self.advance();
+          self.advance_if_space();
+          let e = self.parse_expr(aa)?;
+          y.push(e);
+        }
+        let y = aa.copy_slice(y.as_slice());
+
+        let a = aa.alloc().init(AstLet(x, y));
+        Ok(AstStmt::Let(a))
+      }
+      _ => {
+        let mut x = Vec::new();
+        let e = self.parse_expr(aa)?;
+        x.push(e);
+        while self.token == Token::Comma {
+          self.advance();
+          self.advance_if_space();
+          let e = self.parse_expr(aa)?;
+          x.push(e);
+        }
+        let x = aa.copy_slice(x.as_slice());
+        let a = aa.alloc().init(AstValues(x));
+        Ok(AstStmt::Values(a))
       }
     }
+  }
 
-    Ok(e)
+  pub fn parse_expr<'b>(&mut self, aa: &mut Allocator<'b>) -> Result<AstExpr<'b>, ParseError> {
+    self.parse_expr_c(aa)
   }
 
   // "c"omparison
 
-  pub fn parse_expr_c<'b>(&mut self, alloc: &mut Allocator<'b>) -> Result<AstExpr<'b>, ParseError> {
-    let mut e = self.parse_expr_a(alloc)?;
+  pub fn parse_expr_c<'b>(&mut self, aa: &mut Allocator<'b>) -> Result<AstExpr<'b>, ParseError> {
+    let mut e = self.parse_expr_a(aa)?;
 
     loop {
       if let token @ (
+          Token::EQ |
+          Token::NE |
           Token::GT |
           Token::GE |
           Token::LT |
@@ -87,18 +153,20 @@ impl<'a> Parser<'a> {
       {
         let op =
           match token {
-            Token::GT => ">",
-            Token::GE => ">=",
-            Token::LT => "<",
-            Token::LE => "<=",
+            Token::EQ => AstOp::EQ,
+            Token::NE => AstOp::NE,
+            Token::GT => AstOp::NE,
+            Token::GE => AstOp::NE,
+            Token::LT => AstOp::NE,
+            Token::LE => AstOp::NE,
             _ => panic!(),
           };
         self.advance();
         self.advance_if_space();
 
-        let x = self.parse_expr_a(alloc)?;
-        let a = alloc.alloc().init(AstOp(op, [e, x]));
-        e = AstExpr::Op2(a);
+        let x = self.parse_expr_a(aa)?;
+        let a = aa.alloc().init(AstApp(op, [e, x]));
+        e = AstExpr::App2(a);
       } else {
         break;
       }
@@ -109,22 +177,22 @@ impl<'a> Parser<'a> {
 
   // "a"ddition
 
-  pub fn parse_expr_a<'b>(&mut self, alloc: &mut Allocator<'b>) -> Result<AstExpr<'b>, ParseError> {
-    let mut e = self.parse_expr_m(alloc)?;
+  pub fn parse_expr_a<'b>(&mut self, aa: &mut Allocator<'b>) -> Result<AstExpr<'b>, ParseError> {
+    let mut e = self.parse_expr_m(aa)?;
 
     loop {
       if let token @ (Token::Minus | Token::Plus) = self.token {
         let op =
           match token {
-            Token::Minus => "-",
-            Token::Plus => "+",
+            Token::Minus => AstOp::Sub,
+            Token::Plus => AstOp::Add,
             _ => panic!(),
           };
         self.advance();
         self.advance_if_space();
-        let x = self.parse_expr_m(alloc)?;
-        let a = alloc.alloc().init(AstOp(op, [e, x]));
-        e = AstExpr::Op2(a);
+        let x = self.parse_expr_m(aa)?;
+        let a = aa.alloc().init(AstApp(op, [e, x]));
+        e = AstExpr::App2(a);
       } else {
         break;
       }
@@ -135,16 +203,16 @@ impl<'a> Parser<'a> {
 
   // "m"ultiplication
 
-  pub fn parse_expr_m<'b>(&mut self, alloc: &mut Allocator<'b>) -> Result<AstExpr<'b>, ParseError> {
-    let mut e = self.parse_expr_p(alloc)?;
+  pub fn parse_expr_m<'b>(&mut self, aa: &mut Allocator<'b>) -> Result<AstExpr<'b>, ParseError> {
+    let mut e = self.parse_expr_p(aa)?;
 
     loop {
       if let Token::Star = self.token {
         self.advance();
         self.advance_if_space();
-        let x = self.parse_expr_p(alloc)?;
-        let a = alloc.alloc().init(AstOp("*", [e, x]));
-        e = AstExpr::Op2(a);
+        let x = self.parse_expr_p(aa)?;
+        let a = aa.alloc().init(AstApp(AstOp::Mul, [e, x]));
+        e = AstExpr::App2(a);
       } else {
         break;
       }
@@ -155,40 +223,58 @@ impl<'a> Parser<'a> {
 
   // "p"refix
 
-  pub fn parse_expr_p<'b>(&mut self, alloc: &mut Allocator<'b>) -> Result<AstExpr<'b>, ParseError> {
+  pub fn parse_expr_p<'b>(&mut self, aa: &mut Allocator<'b>) -> Result<AstExpr<'b>, ParseError> {
     if let Token::Minus = self.token {
       self.advance();
       self.advance_if_space();
-      let x = self.parse_expr_p(alloc)?;
-      let a = alloc.alloc().init(AstOp("-", [x]));
-      Ok(AstExpr::Op1(a))
+      let x = self.parse_expr_p(aa)?;
+      let a = aa.alloc().init(AstApp(AstOp::Neg, [x]));
+      Ok(AstExpr::App1(a))
     } else {
-      self.parse_expr_t(alloc)
+      self.parse_expr_t(aa)
     }
   }
 
   // "t"erminal (and funcalls)
 
-  pub fn parse_expr_t<'b>(&mut self, alloc: &mut Allocator<'b>) -> Result<AstExpr<'b>, ParseError> {
+  pub fn parse_expr_t<'b>(&mut self, aa: &mut Allocator<'b>) -> Result<AstExpr<'b>, ParseError> {
     let mut e =
       match self.token {
         Token::Num => {
-          let s = str::from_utf8(alloc.copy_slice(self.span())).unwrap();
+          let s = aa.copy_str(str::from_utf8(self.span()).unwrap());
           self.advance();
           AstExpr::Num(s)
         }
         Token::Sym => {
-          let s = str::from_utf8(alloc.copy_slice(self.span())).unwrap();
+          let s = aa.copy_str(str::from_utf8(self.span()).unwrap());
           self.advance();
           AstExpr::Sym(s)
         }
         Token::LParen => {
           self.advance();
           self.advance_if_space();
-          let expr = self.parse_expr(alloc)?;
+          let expr = self.parse_expr(aa)?;
           self.expect(Token::RParen)?;
           self.advance();
           expr
+        }
+        Token::Loop => {
+          // TODO: disallow a function call where the function is a control
+          // expression
+
+          self.advance();
+          self.advance_if_space();
+          let body = self.parse_stmt_seq(aa)?;
+          match self.token {
+            Token::End => {
+            }
+            _ => {
+              self.fail()?;
+            }
+          }
+          self.advance();
+          let a = aa.alloc().init(AstLoop(body));
+          AstExpr::Loop(a)
         }
         _ => {
           self.fail()?
@@ -206,7 +292,7 @@ impl<'a> Parser<'a> {
         let mut x = Vec::new();
 
         if self.token != Token::RParen {
-          let y = self.parse_expr(alloc)?;
+          let y = self.parse_expr(aa)?;
           x.push(y);
 
           loop {
@@ -214,16 +300,16 @@ impl<'a> Parser<'a> {
             self.expect(Token::Comma)?;
             self.advance();
             self.advance_if_space();
-            let y = self.parse_expr(alloc)?;
+            let y = self.parse_expr(aa)?;
             x.push(y);
           }
         }
 
         self.advance();
 
-        let x = alloc.copy_slice(x.as_slice());
-        let a = alloc.alloc().init(AstApp(e, x));
-        e = AstExpr::App(a);
+        let x = aa.copy_slice(x.as_slice());
+        let a = aa.alloc().init(AstCall(e, x));
+        e = AstExpr::Call(a);
       } else {
         break;
       }

@@ -26,8 +26,15 @@ pub mod u6;
 use crate::prelude::*;
 
 pub fn go() {
-  // let source = b"f( x + ( y ) , z)";
-  let source = b"- f(x) + g( ( x ) , - y) * h(z)";
+  let source =
+    b"\
+    let x =
+      loop
+        let x, y = f(1 + 2 * 3), g(4)
+        h(- -13 * x + y)()
+        break
+      end";
+  // let source = b"- f(x) + g( ( x ) , - y) * h(z)";
   /*
     b"\
 fun foo(n)
@@ -54,8 +61,8 @@ $$$
   let mut parser = Parser::new(source);
 
 
-  if let Ok(e) = parser.parse_expr(allocator) {
-    println!("{}", e.sexp(allocator));
+  if let Ok(x) = parser.parse_stmt(allocator) {
+    println!("{}", x.to_sexp());
   }
 
   /*

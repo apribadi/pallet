@@ -1,21 +1,27 @@
 use crate::prelude::*;
 
-#[derive(Clone, Copy)]
-pub enum Sexp<'a> {
-  Sym(&'a str),
-  Seq(&'a [Sexp<'a>]),
+#[derive(Clone)]
+pub enum Sexp {
+  Sym(String),
+  Seq(Box<[Sexp]>),
 }
 
-impl<'a> fmt::Display for Sexp<'a> {
+impl Sexp {
+  pub fn sym(a: &str) -> Self {
+    Self::Sym(a.to_string())
+  }
+}
+
+impl fmt::Display for Sexp {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
-      Self::Sym(s) => {
+      Self::Sym(a) => {
         // TODO: escape
-        write!(f, "{}", s)?;
+        write!(f, "{}", a)?;
       }
-      Self::Seq(s) => {
+      Self::Seq(a) => {
         write!(f, "(")?;
-        if let Some((x, y)) = s.split_first() {
+        if let Some((x, y)) = a.split_first() {
           write!(f, "{}", x)?;
           for z in y.iter() { write!(f, " {}", z)? }
         }

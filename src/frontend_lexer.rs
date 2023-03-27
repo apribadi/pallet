@@ -202,6 +202,7 @@ impl<'a> Lexer<'a> {
           match unsafe { buf.get_unchecked(i .. j) } {
             b"and" => Token::And,
             b"break" => Token::Break,
+            b"do" => Token::Do,
             b"elif" => Token::Elif,
             b"else" => Token::Else,
             b"end" => Token::End,

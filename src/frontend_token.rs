@@ -56,6 +56,7 @@ pub enum Token {
 
   And,
   Break,
+  Do,
   Elif,
   Else,
   End,
@@ -66,5 +67,6 @@ pub enum Token {
   Loop,
   Or,
   Return,
+  Then,
   While,
 }
