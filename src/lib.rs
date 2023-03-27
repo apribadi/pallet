@@ -25,8 +25,8 @@ pub mod u6;
 use crate::prelude::*;
 
 pub fn go() {
-  let source =
-    b"- f(x) + g(- y) * h(z)";
+  // let source = b"f( x + ( y ) , z)";
+  let source = b"- f(x) + g( ( x ) , - y) * h(z)";
   /*
     b"\
 fun foo(n)
