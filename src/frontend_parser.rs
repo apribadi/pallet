@@ -62,7 +62,7 @@ impl<'a> Parser<'a> {
         self.advance();
         self.advance_if_space();
         let x = self.parse_expr_c(alloc)?;
-        let a = &*alloc.alloc().init((op, [e, x]));
+        let a = alloc.alloc().init(AstOp(op, [e, x]));
         e = AstExpr::Op2(a);
       } else {
         break;
@@ -97,7 +97,7 @@ impl<'a> Parser<'a> {
         self.advance_if_space();
 
         let x = self.parse_expr_a(alloc)?;
-        let a = &*alloc.alloc().init((op, [e, x]));
+        let a = alloc.alloc().init(AstOp(op, [e, x]));
         e = AstExpr::Op2(a);
       } else {
         break;
@@ -123,7 +123,7 @@ impl<'a> Parser<'a> {
         self.advance();
         self.advance_if_space();
         let x = self.parse_expr_m(alloc)?;
-        let a = &*alloc.alloc().init((op, [e, x]));
+        let a = alloc.alloc().init(AstOp(op, [e, x]));
         e = AstExpr::Op2(a);
       } else {
         break;
@@ -143,7 +143,7 @@ impl<'a> Parser<'a> {
         self.advance();
         self.advance_if_space();
         let x = self.parse_expr_p(alloc)?;
-        let a = &*alloc.alloc().init(("*", [e, x]));
+        let a = alloc.alloc().init(AstOp("*", [e, x]));
         e = AstExpr::Op2(a);
       } else {
         break;
@@ -160,7 +160,7 @@ impl<'a> Parser<'a> {
       self.advance();
       self.advance_if_space();
       let x = self.parse_expr_p(alloc)?;
-      let a = &*alloc.alloc().init(("-", [x]));
+      let a = alloc.alloc().init(AstOp("-", [x]));
       Ok(AstExpr::Op1(a))
     } else {
       self.parse_expr_t(alloc)
@@ -221,8 +221,8 @@ impl<'a> Parser<'a> {
 
         self.advance();
 
-        let x = &*alloc.copy_slice(x.as_slice());
-        let a = &*alloc.alloc().init((e, x));
+        let x = alloc.copy_slice(x.as_slice());
+        let a = alloc.alloc().init(AstApp(e, x));
         e = AstExpr::App(a);
       } else {
         break;

@@ -2,41 +2,55 @@ use crate::prelude::*;
 
 #[derive(Clone, Copy)]
 pub enum AstExpr<'a> {
-  App(&'a (AstExpr<'a>, &'a [AstExpr<'a>])),
+  App(&'a AstApp<'a>),
   Num(&'a str),
-  Op1(&'a (&'static str, [AstExpr<'a>; 1])),
-  Op2(&'a (&'static str, [AstExpr<'a>; 2])),
+  Op1(&'a AstOp<'a, 1>),
+  Op2(&'a AstOp<'a, 2>),
   Sym(&'a str),
 }
+
+#[derive(Clone, Copy)]
+pub struct AstApp<'a>(pub AstExpr<'a>, pub &'a [AstExpr<'a>]);
+
+#[derive(Clone, Copy)]
+pub struct AstOp<'a, const N: usize>(pub &'a str, pub [AstExpr<'a>; N]);
 
 impl<'a> AstExpr<'a> {
   pub fn sexp(self, alloc: &mut Allocator<'a>) -> Sexp<'a> {
     match self {
-      Self::App(&(fun, args)) => {
-        let s = alloc.alloc_slice(1 + args.len());
-        let s =
-          s.init_slice(|i|
-            if i == 0 {
-              fun.sexp(alloc)
-            } else {
-              args[i - 1].sexp(alloc)
-            }
-          );
-        Sexp::Seq(s)
-      }
-      Self::Num(s) =>
-        Sexp::Sym(s),
-      Self::Op1(&(op, [x])) => {
-        let x = x.sexp(alloc);
-        Sexp::Seq(alloc.copy_slice(&[Sexp::Sym(op), x]))
-      }
-      Self::Op2(&(op, [x, y])) => {
-        let x = x.sexp(alloc);
-        let y = y.sexp(alloc);
-        Sexp::Seq(alloc.copy_slice(&[Sexp::Sym(op), x, y]))
-      }
-      Self::Sym(s) =>
-        Sexp::Sym(s),
+      Self::App(s) => s.sexp(alloc),
+      Self::Num(s) => Sexp::Sym(s),
+      Self::Op1(s) => s.sexp(alloc),
+      Self::Op2(s) => s.sexp(alloc),
+      Self::Sym(s) => Sexp::Sym(s),
     }
+  }
+}
+
+impl<'a> AstApp<'a> {
+  pub fn sexp(self, alloc: &mut Allocator<'a>) -> Sexp<'a> {
+    Sexp::Seq(
+      alloc.alloc_slice(1 + self.1.len()).init_slice(|i|
+        if i == 0 {
+          self.0.sexp(alloc)
+        } else {
+          self.1[i - 1].sexp(alloc)
+        }
+      )
+    )
+  }
+}
+
+impl<'a, const N: usize> AstOp<'a, N> {
+  pub fn sexp(self, alloc: &mut Allocator<'a>) -> Sexp<'a> {
+    Sexp::Seq(
+      alloc.alloc_slice(1 + N).init_slice(|i|
+        if i == 0 {
+          Sexp::Sym(self.0)
+        } else {
+          self.1[i - 1].sexp(alloc)
+        }
+      )
+    )
   }
 }
