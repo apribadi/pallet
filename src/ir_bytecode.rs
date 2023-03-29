@@ -1,8 +1,7 @@
 use crate::prelude::*;
-use core::mem::transmute;
 
 #[derive(Clone, Copy)]
-pub struct Prog<'a>(&'a [u8]);
+pub struct Program<'a>(&'a [u8]);
 
 #[derive(Clone, Copy)]
 pub struct FunList<'a>(&'a [u8]);
@@ -58,7 +57,7 @@ pub struct InstOp21<'a>(&'a [u8; 5]);
 pub struct InstOp31<'a>(&'a [u8; 7]);
 
 #[derive(Clone, Copy)]
-pub struct InstRet<'a>(&'a [u8]);
+pub struct InstReturn<'a>(&'a [u8]);
 
 #[derive(Clone, Copy)]
 pub enum Inst<'a> {
@@ -71,7 +70,7 @@ pub enum Inst<'a> {
   Op11(InstOp11<'a>),
   Op21(InstOp21<'a>),
   Op31(InstOp31<'a>),
-  Ret(InstRet<'a>),
+  Return(InstReturn<'a>),
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
@@ -92,10 +91,10 @@ pub enum InstTag {
   Op11,
   Op21,
   Op31,
-  Ret,
+  Return,
 }
 
-impl<'a> Prog<'a> {
+impl<'a> Program<'a> {
   pub fn fun_list(self) -> FunList<'a> {
     FunList(self.0)
   }
@@ -255,10 +254,10 @@ impl<'a> Iterator for InstIter<'a> {
         Some(Inst::Op21(InstOp21(self.0.pop_array()))),
       InstTag::Op31 =>
         Some(Inst::Op31(InstOp31(self.0.pop_array()))),
-      InstTag::Ret => {
+      InstTag::Return => {
         let n = self.0.pop_u16() as usize;
         let n = 2 * n;
-        Some(Inst::Ret(InstRet(self.0.pop_slice(n))))
+        Some(Inst::Return(InstReturn(self.0.pop_slice(n))))
       }
     }
   }
@@ -283,11 +282,11 @@ impl<'a> InstGoto<'a> {
 }
 
 impl<'a> InstIf<'a> {
-  pub fn vars(self) -> [VarId; 1] {
+  pub fn args(self) -> [VarId; 1] {
     [ VarId(self.0.get_u16(0)) ]
   }
 
-  pub fn dsts(self) -> [BlockId; 2] {
+  pub fn targets(self) -> [BlockId; 2] {
     [ BlockId(self.0.get_u16(2)),
       BlockId(self.0.get_u16(4)),
     ]
@@ -317,7 +316,7 @@ impl<'a> InstOp11<'a> {
     Op11::decode(self.0.get_u8(0)).unwrap()
   }
 
-  pub fn vars(self) -> [VarId; 1] {
+  pub fn args(self) -> [VarId; 1] {
     [ VarId(self.0.get_u16(1)) ]
   }
 }
@@ -327,7 +326,7 @@ impl<'a> InstOp21<'a> {
     Op21::decode(self.0.get_u8(0)).unwrap()
   }
 
-  pub fn vars(self) -> [VarId; 2] {
+  pub fn args(self) -> [VarId; 2] {
     [ VarId(self.0.get_u16(1)),
       VarId(self.0.get_u16(3)),
     ]
@@ -339,7 +338,7 @@ impl<'a> InstOp31<'a> {
     Op31::decode(self.0.get_u8(0)).unwrap()
   }
 
-  pub fn vars(self) -> [VarId; 3] {
+  pub fn args(self) -> [VarId; 3] {
     [ VarId(self.0.get_u16(1)),
       VarId(self.0.get_u16(3)),
       VarId(self.0.get_u16(5)),
@@ -347,7 +346,7 @@ impl<'a> InstOp31<'a> {
   }
 }
 
-impl<'a> InstRet<'a> {
+impl<'a> InstReturn<'a> {
   pub fn args(self) -> VarIdList<'a> {
     VarIdList(self.0)
   }
@@ -356,34 +355,121 @@ impl<'a> InstRet<'a> {
 impl Ty {
   pub fn decode(t: u8) -> Option<Self> {
     if (t as usize) >= Self::VARIANT_COUNT { return None; }
-    Some(unsafe { transmute::<u8, Self>(t) })
+    Some(unsafe { core::mem::transmute::<u8, Self>(t) })
   }
 }
 
 impl InstTag {
   pub fn decode(t: u8) -> Option<Self> {
     if (t as usize) >= Self::VARIANT_COUNT { return None; }
-    Some(unsafe { transmute::<u8, Self>(t) })
+    Some(unsafe { core::mem::transmute::<u8, Self>(t) })
   }
 }
 
 impl Op11 {
   pub fn decode(t: u8) -> Option<Self> {
     if (t as usize) >= Self::VARIANT_COUNT { return None; }
-    Some(unsafe { transmute::<u8, Self>(t) })
+    Some(unsafe { core::mem::transmute::<u8, Self>(t) })
   }
 }
 
 impl Op21 {
   pub fn decode(t: u8) -> Option<Self> {
     if (t as usize) >= Self::VARIANT_COUNT { return None; }
-    Some(unsafe { transmute::<u8, Self>(t) })
+    Some(unsafe { core::mem::transmute::<u8, Self>(t) })
   }
 }
 
 impl Op31 {
   pub fn decode(t: u8) -> Option<Self> {
     if (t as usize) >= Self::VARIANT_COUNT { return None; }
-    Some(unsafe { transmute::<u8, Self>(t) })
+    Some(unsafe { core::mem::transmute::<u8, Self>(t) })
+  }
+}
+
+impl fmt::Display for BlockId {
+  fn fmt(&self, out: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(out, "{}", self.0)
+  }
+}
+
+impl fmt::Display for VarId {
+  fn fmt(&self, out: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(out, "{}", self.0)
+  }
+}
+
+impl<'a> fmt::Display for Program<'a> {
+  fn fmt(&self, out: &mut fmt::Formatter<'_>) -> fmt::Result {
+    for f in self.fun_list().iter() {
+      let mut i = 0; // varid
+      let mut j = 0; // blockid
+      write!(out, "function {} (", f.name())?;
+      for ty in f.fun_type().inputs().iter() {
+        write!(out, " %{}:{}", i, ty)?;
+        i += 1;
+      }
+      write!(out, " ) -> (")?;
+      for ty in f.fun_type().outputs().iter() {
+        write!(out, " {}", ty)?;
+      }
+      write!(out, " ):\n")?;
+      for inst in f.inst_list().iter() {
+        match inst {
+          Inst::Block(x) => {
+            write!(out, "block @{}", j)?;
+            j += 1;
+            for ty in x.params().iter() {
+              write!(out, " %{}:{}", i, ty)?;
+              i += 1;
+            }
+            write!(out, ":\n")?;
+          }
+          Inst::Goto(x) => {
+            write!(out, "goto @{}", x.target())?;
+            for arg in x.args().iter() {
+              write!(out, " %{}", arg)?;
+            }
+            write!(out, "\n")?;
+          }
+          Inst::If(x) => {
+            write!(out, "if {} {} {}\n", x.args()[0], x.targets()[0], x.targets()[1])?;
+          }
+          Inst::ImmBool(x) => {
+            write!(out, "%{} = imm bool {}\n", i, x.imm())?;
+            i += 1;
+          }
+          Inst::ImmI6(x) => {
+            write!(out, "%{} = imm i6 {}\n", i, u8::from(x.imm()))?;
+            i += 1;
+          }
+          Inst::ImmI64(x) => {
+            write!(out, "%{} = imm i64 {}\n", i, x.imm())?;
+            i += 1;
+          }
+          Inst::Op11(x) => {
+            write!(out, "%{} = {} {}", i, x.op(), x.args()[0])?;
+          }
+          Inst::Op21(x) => {
+            write!(out, "%{} = {} {} {}", i, x.op(), x.args()[0], x.args()[1])?;
+          }
+          Inst::Op31(x) => {
+            write!(out, "%{} = {} {} {} {}", i, x.op(), x.args()[0], x.args()[1], x.args()[2])?;
+          }
+          Inst::Return(x) => {
+            write!(out, "return")?;
+            for arg in x.args().iter() {
+              write!(out, " %{}", arg)?;
+            }
+            write!(out, "\n")?;
+          }
+        }
+      }
+      write!(out, "\n")?;
+    }
+
+    write!(out, "\n")?;
+
+    Ok(())
   }
 }

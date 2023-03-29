@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-#[derive(Clone, Copy, Eq, PartialEq, VariantCount)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, VariantCount)]
 #[repr(u8)]
 pub enum Op11 {
   BoolNot,
@@ -18,7 +18,7 @@ pub enum Op11 {
   I64ToI6,
 }
 
-#[derive(Clone, Copy, Eq, PartialEq, VariantCount)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, VariantCount)]
 #[repr(u8)]
 pub enum Op21 {
   BoolAnd,
@@ -56,8 +56,27 @@ pub enum Op21 {
   I64Sub,
 }
 
-#[derive(Clone, Copy, Eq, PartialEq, VariantCount)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, VariantCount)]
 #[repr(u8)]
 pub enum Op31 {
   I64Sel,
+}
+
+
+impl fmt::Display for Op11 {
+  fn fmt(&self, out: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(out, "{:?}", self)
+  }
+}
+
+impl fmt::Display for Op21 {
+  fn fmt(&self, out: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(out, "{:?}", self)
+  }
+}
+
+impl fmt::Display for Op31 {
+  fn fmt(&self, out: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(out, "{:?}", self)
+  }
 }

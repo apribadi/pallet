@@ -71,23 +71,6 @@ $$$
     println!("{}", x.to_sexp());
   }
 
-  /*
-  let mut lexer = Lexer::new(source);
-
-  loop {
-    let token = lexer.next();
-
-    if token == Token::EOF { break; }
-
-    print!("{:?}: ", token);
-
-    match str::from_utf8(lexer.span()) {
-      Ok(span) => print!("\"{}\"\n", span),
-      Err(_) => print!("{:?}\n", lexer.span()),
-    }
-  }
-  */
-
   use bytecode::*;
 
   let program =

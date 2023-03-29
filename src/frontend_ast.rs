@@ -193,7 +193,7 @@ impl<'a> ToSexp for AstSymbol<'a> {
 }
 
 impl AstOp {
-  fn to_name(&self) -> &'static str {
+  fn to_name(self) -> &'static str {
     match self {
       Self::Add => "+",
       Self::And => "&",
