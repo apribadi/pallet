@@ -7,9 +7,9 @@ pub enum Token {
 
   EOF,
   Error,
-  Num,
+  Number,
   Space,
-  Sym,
+  Symbol,
 
   // dots
 

@@ -2,24 +2,28 @@ use crate::prelude::*;
 
 #[derive(Clone)]
 pub enum Sexp {
-  Sym(String),
-  Seq(Box<[Sexp]>),
+  Atom(String),
+  List(Box<[Sexp]>),
 }
 
 impl Sexp {
-  pub fn sym(a: &str) -> Self {
-    Self::Sym(a.to_string())
+  pub fn from_atom(a: &str) -> Self {
+    Self::Atom(a.to_string())
   }
+}
+
+pub trait ToSexp {
+  fn to_sexp(&self) -> Sexp;
 }
 
 impl fmt::Display for Sexp {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
-      Self::Sym(a) => {
+      Self::Atom(a) => {
         // TODO: escape
         write!(f, "{}", a)?;
       }
-      Self::Seq(a) => {
+      Self::List(a) => {
         write!(f, "(")?;
         if let Some((x, y)) = a.split_first() {
           write!(f, "{}", x)?;

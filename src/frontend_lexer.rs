@@ -18,16 +18,16 @@ impl<'a> Lexer<'a> {
       jumps: [
         [
           // Start =>
-          State::Num,
+          State::Number,
           State::Dot,
           State::Comment,
           State::Space,
-          State::Sym,
+          State::Symbol,
           State::Operator,
           State::TerminalPunctuation,
           State::Sign,
           State::Space,
-          State::Sym,
+          State::Symbol,
           State::TerminalUnknownCharacter,
         ],
         [
@@ -59,18 +59,18 @@ impl<'a> Lexer<'a> {
           State::TerminalDot,
         ],
         [
-          // Num =>
-          State::Num,
-          State::Num,
-          State::TerminalNum,
-          State::TerminalNum,
-          State::TerminalNum,
-          State::TerminalNum,
-          State::TerminalNum,
-          State::TerminalNum,
-          State::TerminalNum,
-          State::Num,
-          State::TerminalNum,
+          // Number =>
+          State::Number,
+          State::Number,
+          State::TerminalNumber,
+          State::TerminalNumber,
+          State::TerminalNumber,
+          State::TerminalNumber,
+          State::TerminalNumber,
+          State::TerminalNumber,
+          State::TerminalNumber,
+          State::Number,
+          State::TerminalNumber,
         ],
         [
           // Operator =>
@@ -88,7 +88,7 @@ impl<'a> Lexer<'a> {
         ],
         [
           // Sign =>
-          State::Num,
+          State::Number,
           State::TerminalOperator,
           State::TerminalOperator,
           State::TerminalOperator,
@@ -115,18 +115,18 @@ impl<'a> Lexer<'a> {
           State::TerminalSpace,
         ],
         [
-          // Sym =>
-          State::TerminalSym,
-          State::TerminalSym,
-          State::TerminalSym,
-          State::TerminalSym,
-          State::Sym,
-          State::TerminalSym,
-          State::TerminalSym,
-          State::TerminalSym,
-          State::TerminalSym,
-          State::Sym,
-          State::TerminalSym,
+          // Symbol =>
+          State::Symbol,
+          State::TerminalSymbol,
+          State::TerminalSymbol,
+          State::TerminalSymbol,
+          State::Symbol,
+          State::TerminalSymbol,
+          State::TerminalSymbol,
+          State::TerminalSymbol,
+          State::TerminalSymbol,
+          State::Symbol,
+          State::TerminalSymbol,
         ],
       ],
     }
@@ -170,8 +170,8 @@ impl<'a> Lexer<'a> {
             _ => Token::Error,
           }
         }
-        State::Num | State::TerminalNum => {
-          Token::Num
+        State::Number | State::TerminalNumber => {
+          Token::Number
         }
         State::Operator | State::Sign | State::TerminalOperator => {
           match unsafe { buf.get_unchecked(i .. j) } {
@@ -198,7 +198,7 @@ impl<'a> Lexer<'a> {
             _ => Token::Error,
           }
         }
-        State::Sym | State::TerminalSym => {
+        State::Symbol | State::TerminalSymbol => {
           match unsafe { buf.get_unchecked(i .. j) } {
             b"and" => Token::And,
             b"break" => Token::Break,
@@ -213,8 +213,9 @@ impl<'a> Lexer<'a> {
             b"loop" => Token::Loop,
             b"or" => Token::Or,
             b"return" => Token::Return,
+            b"then" => Token::Then,
             b"while" => Token::While,
-            _ => Token::Sym,
+            _ => Token::Symbol,
           }
         }
         State::TerminalPunctuation => {
@@ -315,17 +316,17 @@ enum State {
   Start,
   Comment,
   Dot,
-  Num,
+  Number,
   Operator,
   Sign,
   Space,
-  Sym,
+  Symbol,
   TerminalDot,
-  TerminalNum,
+  TerminalNumber,
   TerminalOperator,
   TerminalPunctuation,
   TerminalSpace,
-  TerminalSym,
+  TerminalSymbol,
   TerminalUnknownCharacter,
 }
 

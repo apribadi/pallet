@@ -26,14 +26,23 @@ pub mod u6;
 use crate::prelude::*;
 
 pub fn go() {
+  let source = b"if 1 then f() g() else z() end";
+  /*
   let source =
     b"\
-    let x =
-      loop
-        let x, y = f(1 + 2 * 3), g(4)
-        h(- -13 * x + y)()
-        break
+    let a, b, c =
+      if 1 + 1 == 2 then
+        f()
+        1, 2, 3
+      else
+        loop
+          let x, y = f(1 + 2 * 3), g(4)
+          !h(- -13 * x + y)()
+          break x + y, 1, 2
+        end
       end";
+      */
+
   // let source = b"- f(x) + g( ( x ) , - y) * h(z)";
   /*
     b"\
