@@ -26,8 +26,6 @@ pub mod u6;
 use crate::prelude::*;
 
 pub fn go() {
-  let source = b"if 1 then f() g() else z() end";
-  /*
   let source =
     b"\
     let a, b, c =
@@ -41,7 +39,6 @@ pub fn go() {
           break x + y, 1, 2
         end
       end";
-      */
 
   // let source = b"- f(x) + g( ( x ) , - y) * h(z)";
   /*

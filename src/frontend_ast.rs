@@ -18,10 +18,10 @@ pub enum AstExpr<'a> {
   FunCall(&'a AstFunCall<'a>),
   If(&'a AstIf<'a>),
   Loop(&'a AstLoop<'a>),
-  Number(&'a str),
+  Number(&'a AstNumber<'a>),
   OpCall1(&'a AstOpCall<'a, 1>),
   OpCall2(&'a AstOpCall<'a, 2>),
-  Symbol(&'a str),
+  Symbol(&'a AstSymbol<'a>),
 }
 
 #[derive(Clone, Copy)]
@@ -57,13 +57,10 @@ pub struct AstBreak<'a>(pub &'a [AstExpr<'a>]);
 pub struct AstExprSeq<'a>(pub &'a [AstExpr<'a>]);
 
 #[derive(Clone, Copy)]
-pub struct AstLet<'a>(pub &'a [&'a str], pub &'a [AstExpr<'a>]);
+pub struct AstLet<'a>(pub &'a [AstSymbol<'a>], pub &'a [AstExpr<'a>]);
 
 #[derive(Clone, Copy)]
 pub struct AstReturn<'a>(pub &'a [AstExpr<'a>]);
-
-#[derive(Clone, Copy)]
-pub struct AstOpCall<'a, const N: usize>(pub AstOp, pub [AstExpr<'a>; N]);
 
 #[derive(Clone, Copy)]
 pub struct AstFunCall<'a>(pub AstExpr<'a>, pub &'a [AstExpr<'a>]);
@@ -73,6 +70,15 @@ pub struct AstIf<'a>(pub AstExpr<'a>, pub &'a [AstStmt<'a>], pub &'a [AstStmt<'a
 
 #[derive(Clone, Copy)]
 pub struct AstLoop<'a>(pub &'a [AstStmt<'a>]);
+
+#[derive(Clone, Copy)]
+pub struct AstNumber<'a>(pub &'a str);
+
+#[derive(Clone, Copy)]
+pub struct AstOpCall<'a, const N: usize>(pub AstOp, pub [AstExpr<'a>; N]);
+
+#[derive(Clone, Copy)]
+pub struct AstSymbol<'a>(pub &'a str);
 
 fn sexp_head_and_body<T>(head: Sexp, body: &[T]) -> Sexp
 where
@@ -103,10 +109,10 @@ impl<'a> ToSexp for AstExpr<'a> {
       Self::FunCall(x) => x.to_sexp(),
       Self::If(x) => x.to_sexp(),
       Self::Loop(x) => x.to_sexp(),
-      Self::Number(x) => Sexp::from_atom(x),
+      Self::Number(x) => x.to_sexp(),
       Self::OpCall1(x) => x.to_sexp(),
       Self::OpCall2(x) => x.to_sexp(),
-      Self::Symbol(x) => Sexp::from_atom(x),
+      Self::Symbol(x) => x.to_sexp(),
     }
   }
 }
@@ -121,7 +127,7 @@ impl<'a> ToSexp for AstLet<'a> {
   fn to_sexp(&self) -> Sexp {
     let mut a = Vec::new();
     a.push(Sexp::from_atom("let"));
-    for x in self.0.iter() { a.push(Sexp::from_atom(x)) }
+    for x in self.0.iter() { a.push(x.to_sexp()) }
     a.push(Sexp::from_atom("="));
     for x in self.1.iter() { a.push(x.to_sexp()) }
     Sexp::List(a.into_boxed_slice())
@@ -168,9 +174,21 @@ impl<'a> ToSexp for AstLoop<'a> {
   }
 }
 
+impl<'a> ToSexp for AstNumber<'a> {
+  fn to_sexp(&self) -> Sexp {
+    Sexp::from_atom(self.0)
+  }
+}
+
 impl<'a, const N: usize> ToSexp for AstOpCall<'a, N> {
   fn to_sexp(&self) -> Sexp {
     sexp_head_and_body(Sexp::from_atom(self.0.to_name()), &self.1)
+  }
+}
+
+impl<'a> ToSexp for AstSymbol<'a> {
+  fn to_sexp(&self) -> Sexp {
+    Sexp::from_atom(self.0)
   }
 }
 

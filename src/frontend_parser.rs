@@ -49,9 +49,9 @@ impl<'a> Parser<'a> {
     self.lexer.span()
   }
 
-  pub fn parse_symbol<'b>(&mut self, aa: &mut Allocator<'b>) -> Result<&'b str, ParseError> {
+  pub fn parse_symbol<'b>(&mut self, aa: &mut Allocator<'b>) -> Result<AstSymbol<'b>, ParseError> {
     self.expect(Token::Symbol)?;
-    let x = aa.copy_str(str::from_utf8(self.span()).unwrap());
+    let x = AstSymbol(aa.copy_str(str::from_utf8(self.span()).unwrap()));
     self.advance();
     self.advance_over_space();
     Ok(x)
@@ -103,7 +103,7 @@ impl<'a> Parser<'a> {
     Ok(aa.copy_slice(a.as_slice()))
   }
 
-  pub fn parse_symbol_nonempty_seq<'b>(&mut self, aa: &mut Allocator<'b>) -> Result<&'b [&'b str], ParseError> {
+  pub fn parse_symbol_nonempty_seq<'b>(&mut self, aa: &mut Allocator<'b>) -> Result<&'b [AstSymbol<'b>], ParseError> {
     let mut a = Vec::new();
     let x = self.parse_symbol(aa)?;
     a.push(x);
@@ -257,14 +257,14 @@ impl<'a> Parser<'a> {
           x
         }
         Token::Number => {
-          let x = aa.copy_str(str::from_utf8(self.span()).unwrap());
+          let x = AstNumber(aa.copy_str(str::from_utf8(self.span()).unwrap()));
           self.advance();
-          AstExpr::Number(x)
+          AstExpr::Number(aa.alloc().init(x))
         }
         Token::Symbol => {
-          let x = aa.copy_str(str::from_utf8(self.span()).unwrap());
+          let x = AstSymbol(aa.copy_str(str::from_utf8(self.span()).unwrap()));
           self.advance();
-          AstExpr::Symbol(x)
+          AstExpr::Symbol(aa.alloc().init(x))
         }
         Token::If => {
           self.advance();
