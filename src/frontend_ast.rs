@@ -2,7 +2,7 @@ use crate::prelude::*;
 
 #[derive(Clone, Copy)]
 pub enum AstItem<'a> {
-  FunDefn(&'a AstFunDefn<'a>),
+  FunDef(&'a AstFunDef<'a>),
 }
 
 #[derive(Clone, Copy)]
@@ -44,9 +44,9 @@ pub enum AstOp {
 }
 
 #[derive(Clone, Copy)]
-pub struct AstFunDefn<'a> {
-  pub name: &'a str,
-  pub args: &'a [&'a str],
+pub struct AstFunDef<'a> {
+  pub name: AstSymbol<'a>,
+  pub params: &'a [AstSymbol<'a>],
   pub body: &'a [AstStmt<'a>],
 }
 
@@ -80,6 +80,17 @@ pub struct AstOpCall<'a, const N: usize>(pub AstOp, pub [AstExpr<'a>; N]);
 #[derive(Clone, Copy)]
 pub struct AstSymbol<'a>(pub &'a str);
 
+fn sexp_list<T>(list: &[T]) -> Sexp
+where
+  T: ToSexp
+{
+  let mut a = Vec::new();
+  for x in list.iter() {
+    a.push(x.to_sexp())
+  }
+  Sexp::List(a.into_boxed_slice())
+}
+
 fn sexp_head_and_body<T>(head: Sexp, body: &[T]) -> Sexp
 where
   T: ToSexp
@@ -90,6 +101,14 @@ where
     a.push(x.to_sexp())
   }
   Sexp::List(a.into_boxed_slice())
+}
+
+impl<'a> ToSexp for AstItem<'a> {
+  fn to_sexp(&self) -> Sexp {
+    match self {
+      Self::FunDef(x) => x.to_sexp(),
+    }
+  }
 }
 
 impl<'a> ToSexp for AstStmt<'a> {
@@ -114,6 +133,19 @@ impl<'a> ToSexp for AstExpr<'a> {
       Self::OpCall2(x) => x.to_sexp(),
       Self::Symbol(x) => x.to_sexp(),
     }
+  }
+}
+
+impl<'a> ToSexp for AstFunDef<'a> {
+  fn to_sexp(&self) -> Sexp {
+    let mut a = Vec::new();
+    a.push(Sexp::from_atom("fundef"));
+    a.push(self.name.to_sexp());
+    a.push(sexp_list(self.params));
+    for stmt in self.body.iter() {
+      a.push(stmt.to_sexp())
+    }
+    Sexp::List(a.into_boxed_slice())
   }
 }
 

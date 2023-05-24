@@ -27,47 +27,17 @@ use crate::prelude::*;
 
 pub fn go() {
   let source =
-    b"\
-    let a, b, c =
-      if 1 + 1 == 2 then
-        f()
-        1, 2, 3
-      else
-        loop
-          let x, y = f(1 + 2 * 3), g(4)
-          !h(- -13 * x + y)()
-          break x + y, 1, 2
-        end
-      end";
-
-  // let source = b"- f(x) + g( ( x ) , - y) * h(z)";
-  /*
-    b"\
+      b"\
 fun foo(n)
-  let x = n
-  let i = 0
-  # comment
-  while i < 100
-    x = x + i
-    i = i + 1
-  end
-  return x + -13
-end
-\xff
-.
-..
-...
-....
-$$$
-";
-*/
+  n
+end";
 
   let mut arena = Arena::new();
   let allocator = arena.allocator_mut();
   let mut parser = Parser::new(source);
 
 
-  if let Ok(x) = parser.parse_stmt(allocator) {
+  if let Ok(x) = parser.parse_item(allocator) {
     println!("{}", x.to_sexp());
   }
 

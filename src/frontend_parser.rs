@@ -57,29 +57,47 @@ impl<'a> Parser<'a> {
     Ok(x)
   }
 
-  /*
   pub fn parse_item<'b>(&mut self, aa: &mut Allocator<'b>) -> Result<AstItem<'b>, ParseError> {
-    match token.self {
+    match self.token {
       Token::Fun => {
-        self.parse_fundefn(aa)
+        let x = self.parse_fundef(aa)?;
+        Ok(AstItem::FunDef(aa.alloc().init(x)))
       }
       _ => {
-        self.fail();
+        self.fail()
       }
     }
   }
-  */
 
-  /*
-  pub fn parse_fundefn<'b>(&mut self, aa: &mut Allocator<'b>) -> Result<&'b AstFunDefn<'b>, ParseError> {
+  pub fn parse_fundef<'b>(&mut self, aa: &mut Allocator<'b>) -> Result<AstFunDef<'b>, ParseError> {
     self.expect(Token::Fun)?;
     self.advance();
     self.advance_over_space();
-    let x = self.parse_symbol(aa)?;
+    let name = self.parse_symbol(aa)?;
     self.expect(Token::LParen)?;
-    self.expect(Token::Symbol)?;
+    self.advance();
+    self.advance_over_space();
+    let mut params = Vec::new();
+    if self.token != Token::RParen {
+      let param = self.parse_symbol(aa)?;
+      params.push(param);
+      while self.token != Token::RParen {
+        self.expect(Token::Comma)?;
+        self.advance();
+        self.advance_over_space();
+        let param = self.parse_symbol(aa)?;
+        params.push(param);
+      }
+    }
+    let params = aa.copy_slice(params.as_slice());
+    self.advance();
+    self.advance_over_space();
+    let body = self.parse_stmt_seq(aa)?;
+    self.expect(Token::End)?;
+    self.advance();
+    self.advance_over_space();
+    Ok(AstFunDef { name, params, body })
   }
-  */
 
   pub fn parse_stmt_seq<'b>(&mut self, aa: &mut Allocator<'b>) -> Result<&'b [AstStmt<'b>], ParseError> {
     let mut a = Vec::new();

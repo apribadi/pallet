@@ -1,5 +1,30 @@
 use crate::prelude::*;
 
+// (B)yte (C)ode (R)ecord
+//
+// with N fields
+//
+// i0 : 0  ... 4
+// i1 : 4  ... 8
+// iN : 4N ... 4(N+1)
+// x0 : i0 ... i1
+// x1 : i1 ... i2
+
+#[inline(always)]
+fn bcr_get(a: &[u8], i: usize) -> &[u8] {
+  let u = a.get_u32(4 * i) as usize;
+  let v = a.get_u32(4 * i + 4) as usize;
+  &a[u .. v]
+}
+
+// (B)yte (C)ode (L)ist
+//
+// i0 : 0  ... 4
+// i1 : 4  ... 8
+// iN : 4N ... 4(N+1)
+// x0 : i0 ... i1
+// x1 : i1 ... i2
+
 #[derive(Clone, Copy)]
 pub struct Program<'a>(&'a [u8]);
 
@@ -159,8 +184,8 @@ impl<'a> Fun<'a> {
 
 impl<'a> FunTy<'a> {
   // ofs1
-  // val_type_list | [ofs0, ofs1)
-  // val_type_list | [ofs1, ofs2)
+  // type_list | [ofs0, ofs1)
+  // type_list | [ofs1, ofs2)
   //
   // ofs0 = 4
   // ofs2 = len
@@ -426,38 +451,38 @@ impl<'a> fmt::Display for Program<'a> {
             write!(out, ":\n")?;
           }
           Inst::Goto(x) => {
-            write!(out, "goto @{}", x.target())?;
+            write!(out, "  goto @{}", x.target())?;
             for arg in x.args().iter() {
               write!(out, " %{}", arg)?;
             }
             write!(out, "\n")?;
           }
           Inst::If(x) => {
-            write!(out, "if {} {} {}\n", x.args()[0], x.targets()[0], x.targets()[1])?;
+            write!(out, "  if {} {} {}\n", x.args()[0], x.targets()[0], x.targets()[1])?;
           }
           Inst::ImmBool(x) => {
-            write!(out, "%{} = imm bool {}\n", i, x.imm())?;
+            write!(out, "  %{} = imm bool {}\n", i, x.imm())?;
             i += 1;
           }
           Inst::ImmI6(x) => {
-            write!(out, "%{} = imm i6 {}\n", i, u8::from(x.imm()))?;
+            write!(out, "  %{} = imm i6 {}\n", i, u8::from(x.imm()))?;
             i += 1;
           }
           Inst::ImmI64(x) => {
-            write!(out, "%{} = imm i64 {}\n", i, x.imm())?;
+            write!(out, "  %{} = imm i64 {}\n", i, x.imm())?;
             i += 1;
           }
           Inst::Op11(x) => {
-            write!(out, "%{} = {} {}", i, x.op(), x.args()[0])?;
+            write!(out, "  %{} = {} {}\n", i, x.op(), x.args()[0])?;
           }
           Inst::Op21(x) => {
-            write!(out, "%{} = {} {} {}", i, x.op(), x.args()[0], x.args()[1])?;
+            write!(out, "  %{} = {} {} {}\n", i, x.op(), x.args()[0], x.args()[1])?;
           }
           Inst::Op31(x) => {
-            write!(out, "%{} = {} {} {} {}", i, x.op(), x.args()[0], x.args()[1], x.args()[2])?;
+            write!(out, "  %{} = {} {} {} {}\n", i, x.op(), x.args()[0], x.args()[1], x.args()[2])?;
           }
           Inst::Return(x) => {
-            write!(out, "return")?;
+            write!(out, "  return")?;
             for arg in x.args().iter() {
               write!(out, " %{}", arg)?;
             }
@@ -471,5 +496,48 @@ impl<'a> fmt::Display for Program<'a> {
     write!(out, "\n")?;
 
     Ok(())
+  }
+}
+
+pub struct BcBuilder {
+  buf: ByteBuf,
+  fun_size_backpatch: Option<usize>,
+  fun_start: Option<usize>,
+  fun_ofs1_backpatch: Option<usize>,
+  fun_ofs2_backpatch: Option<usize>,
+}
+
+impl BcBuilder {
+  pub fn new() -> Self {
+    Self {
+      buf: ByteBuf::new(),
+      fun_start: None,
+      fun_size_backpatch: None,
+      fun_ofs1_backpatch: None,
+      fun_ofs2_backpatch: None,
+    }
+  }
+
+  pub fn emit_fun_start(&mut self) {
+    let i = self.buf.len();
+    self.fun_size_backpatch = Some(i);
+    self.buf.put_u32(0);
+    let i = self.buf.len();
+    self.fun_start = Some(i);
+    self.fun_ofs1_backpatch = Some(i);
+    self.buf.put_u32(0);
+    let i = self.buf.len();
+    self.fun_ofs2_backpatch = Some(i);
+    self.buf.put_u32(0);
+  }
+
+  pub fn emit_fun_stop(&mut self) {
+    let here = self.buf.len();
+    let start = self.fun_start.unwrap();
+    let size = u32::try_from(here - start).unwrap();
+    let backpatch = self.fun_size_backpatch.unwrap();
+    self.buf.set_u32(backpatch, size);
+    self.fun_size_backpatch = None;
+    self.fun_start = None;
   }
 }

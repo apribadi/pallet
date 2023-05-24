@@ -44,6 +44,10 @@ impl<'a> ByteCursor<'a> {
 pub struct ByteBuf(Vec<u8>);
 
 impl ByteBuf {
+  pub fn new() -> Self {
+    Self(Vec::new())
+  }
+
   #[inline(always)]
   pub fn put_array<const N: usize>(&mut self, value: &[u8; N]) {
     self.0.extend_from_slice(value)

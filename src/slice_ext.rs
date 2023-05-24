@@ -37,4 +37,3 @@ impl<T> SliceExt<T> for [T] {
     (x, y)
   }
 }
-
