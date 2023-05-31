@@ -10,6 +10,7 @@
 
 mod prelude;
 pub mod backend;
+pub mod bc;
 pub mod buf;
 pub mod bytecode;
 pub mod frontend_ast;
@@ -19,6 +20,7 @@ pub mod frontend_token;
 pub mod ir_bytecode;
 pub mod ir_op;
 pub mod ir_ty;
+pub mod phantom;
 pub mod sexp;
 pub mod slice_ext;
 pub mod u6;

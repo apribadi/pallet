@@ -261,6 +261,7 @@ pub fn compile<'a>(program: bytecode::Program<'a>) -> Box<[u8]> {
             };
           vars.push(u);
         }
+        /*
         bytecode::Inst::Op31(tag, x, y, z) => {
           let x = vars[usize::from(x)];
           let y = vars[usize::from(y)];
@@ -272,6 +273,7 @@ pub fn compile<'a>(program: bytecode::Program<'a>) -> Box<[u8]> {
             };
           vars.push(u);
         }
+        */
         bytecode::Inst::Ret(xs) => {
           let _: _ = fb.ins().return_(&map_slice(xs, |&x| vars[usize::from(x)]));
         }

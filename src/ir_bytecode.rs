@@ -1,58 +1,24 @@
 use crate::prelude::*;
 
-// (B)yte (C)ode (R)ecord
-//
-// with N fields
-//
-// i0 : 0  ... 4
-// i1 : 4  ... 8
-// iN : 4N ... 4(N+1)
-// x0 : i0 ... i1
-// x1 : i1 ... i2
-
-#[inline(always)]
-fn bcr_get(a: &[u8], i: usize) -> &[u8] {
-  let u = a.get_u32(4 * i) as usize;
-  let v = a.get_u32(4 * i + 4) as usize;
-  &a[u .. v]
-}
-
-// (B)yte (C)ode (L)ist
-//
-// i0 : 0  ... 4
-// i1 : 4  ... 8
-// iN : 4N ... 4(N+1)
-// x0 : i0 ... i1
-// x1 : i1 ... i2
-
 #[derive(Clone, Copy)]
-pub struct Program<'a>(&'a [u8]);
+pub struct Prog<'a>(&'a [u8]);
 
 #[derive(Clone, Copy)]
 pub struct FunList<'a>(&'a [u8]);
-
-pub struct FunIter<'a>(ByteCursor<'a>);
 
 #[derive(Clone, Copy)]
 pub struct Fun<'a>(&'a [u8]);
 
 #[derive(Clone, Copy)]
-pub struct FunTy<'a>(&'a [u8]);
-
-#[derive(Clone, Copy)]
 pub struct TyList<'a>(&'a [u8]);
 
-pub struct TyIter<'a>(ByteCursor<'a>);
-
 #[derive(Clone, Copy)]
-pub struct VarIdList<'a>(&'a [u8]);
-
-pub struct VarIdIter<'a>(ByteCursor<'a>);
+pub struct IdList<'a>(&'a [u8]);
 
 #[derive(Clone, Copy)]
 pub struct InstList<'a>(&'a [u8]);
 
-pub struct InstIter<'a>(ByteCursor<'a>);
+pub struct InstIter<'a>(&'a [u8]);
 
 #[derive(Clone, Copy)]
 pub struct InstBlock<'a>(&'a [u8]);
@@ -79,9 +45,6 @@ pub struct InstOp11<'a>(&'a [u8; 3]);
 pub struct InstOp21<'a>(&'a [u8; 5]);
 
 #[derive(Clone, Copy)]
-pub struct InstOp31<'a>(&'a [u8; 7]);
-
-#[derive(Clone, Copy)]
 pub struct InstReturn<'a>(&'a [u8]);
 
 #[derive(Clone, Copy)]
@@ -94,12 +57,11 @@ pub enum Inst<'a> {
   ImmI64(InstImmI64<'a>),
   Op11(InstOp11<'a>),
   Op21(InstOp21<'a>),
-  Op31(InstOp31<'a>),
   Return(InstReturn<'a>),
 }
 
 #[derive(Clone, Copy, Eq, PartialEq)]
-pub struct VarId(pub u16);
+pub struct Id(pub u16);
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub struct BlockId(pub u16);
@@ -115,135 +77,54 @@ pub enum InstTag {
   ImmI64,
   Op11,
   Op21,
-  Op31,
   Return,
 }
 
-impl<'a> Program<'a> {
+impl<'a> Prog<'a> {
   pub fn fun_list(self) -> FunList<'a> {
-    FunList(self.0)
+    FunList(bc::field::<1, 0>(self.0))
   }
 }
 
 impl<'a> FunList<'a> {
-  pub fn iter(self) -> FunIter<'a> {
-    FunIter(ByteCursor::new(self.0))
-  }
-}
-
-impl<'a> Iterator for FunIter<'a> {
-  type Item = Fun<'a>;
-
-  fn next(&mut self) -> Option<Self::Item> {
-    if self.0.is_empty() { return None; }
-    let n = self.0.pop_u32();
-    let x = self.0.pop_slice(n as usize);
-    Some(Fun(x))
+  pub fn iter(self) -> impl Iterator<Item = Fun<'a>> {
+    bc::iter_variable_sized(self.0).map(|x| Fun(x))
   }
 }
 
 impl<'a> Fun<'a> {
-  // ofs1
-  // ofs2
-  // name      | [ofs0, ofs1)
-  // fun_type  | [ofs1, ofs2)
-  // inst_list | [ofs2, ofs3)
-  //
-  // ofs0 = 8
-  // ofs3 = len
-
-  fn ofs0(self) -> usize { let _ = self; 8 }
-  fn ofs1(self) -> usize { self.0.get_u32(0) as usize }
-  fn ofs2(self) -> usize { self.0.get_u32(4) as usize }
-  fn ofs3(self) -> usize { self.0.len() }
-
   pub fn name(self) -> &'a str {
-    let a = self.0;
-    let i = self.ofs0();
-    let j = self.ofs1();
-    let x = &a[i .. j];
-    core::str::from_utf8(x).unwrap()
+    core::str::from_utf8(bc::field::<4, 0>(self.0)).unwrap()
   }
 
-  pub fn fun_type(self) -> FunTy<'a> {
-    let a = self.0;
-    let i = self.ofs1();
-    let j = self.ofs2();
-    let x = &a[i .. j];
-    FunTy(x)
+  pub fn input_ty_list(self) -> TyList<'a> {
+    TyList(bc::field::<4, 1>(self.0))
+  }
+
+  pub fn output_ty_list(self) -> TyList<'a> {
+    TyList(bc::field::<4, 2>(self.0))
   }
 
   pub fn inst_list(self) -> InstList<'a> {
-    let a = self.0;
-    let i = self.ofs2();
-    let j = self.ofs3();
-    let x = &a[i .. j];
-    InstList(x)
-  }
-}
-
-impl<'a> FunTy<'a> {
-  // ofs1
-  // type_list | [ofs0, ofs1)
-  // type_list | [ofs1, ofs2)
-  //
-  // ofs0 = 4
-  // ofs2 = len
-
-  fn ofs0(self) -> usize { let _ = self; 4 }
-  fn ofs1(self) -> usize { self.0.get_u32(0) as usize }
-  fn ofs2(self) -> usize { self.0.len() }
-
-  pub fn inputs(self) -> TyList<'a> {
-    let a = self.0;
-    let i = self.ofs0();
-    let j = self.ofs1();
-    let x = &a[i .. j];
-    TyList(x)
-  }
-
-  pub fn outputs(self) -> TyList<'a> {
-    let a = self.0;
-    let i = self.ofs1();
-    let j = self.ofs2();
-    let x = &a[i .. j];
-    TyList(x)
+    InstList(bc::field::<4, 3>(self.0))
   }
 }
 
 impl<'a> TyList<'a> {
-  pub fn iter(self) -> TyIter<'a> {
-    TyIter(ByteCursor::new(self.0))
+  pub fn iter(self) -> impl 'a + Iterator<Item = Ty> {
+    bc::iter_constant_sized(self.0).map(|x| Ty::decode(u8::from_le_bytes(*x)).unwrap())
   }
 }
 
-impl<'a> Iterator for TyIter<'a> {
-  type Item = Ty;
-
-  fn next(&mut self) -> Option<Self::Item> {
-    if self.0.is_empty() { return None; }
-    Some(Ty::decode(self.0.pop_u8()).unwrap())
-  }
-}
-
-impl<'a> VarIdList<'a> {
-  pub fn iter(self) -> VarIdIter<'a> {
-    VarIdIter(ByteCursor::new(self.0))
-  }
-}
-
-impl<'a> Iterator for VarIdIter<'a> {
-  type Item = VarId;
-
-  fn next(&mut self) -> Option<Self::Item> {
-    if self.0.is_empty() { return None; }
-    Some(VarId(self.0.pop_u16()))
+impl<'a> IdList<'a> {
+  pub fn iter(self) -> impl 'a + Iterator<Item = Id> {
+    bc::iter_constant_sized(self.0).map(|x| Id(u16::from_le_bytes(*x)))
   }
 }
 
 impl<'a> InstList<'a> {
   pub fn iter(&self) -> InstIter<'a> {
-    InstIter(ByteCursor::new(self.0))
+    InstIter(self.0)
   }
 }
 
@@ -253,9 +134,9 @@ impl<'a> Iterator for InstIter<'a> {
   fn next(&mut self) -> Option<Self::Item> {
     if self.0.is_empty() { return None; }
 
-    let t = self.0.pop_u8();
+    let t = InstTag::decode(self.0.pop_u8()).unwrap();
 
-    match InstTag::decode(t).unwrap() {
+    match t {
       InstTag::Block => {
         let n = self.0.pop_u16() as usize;
         Some(Inst::Block(InstBlock(self.0.pop_slice(n))))
@@ -277,8 +158,6 @@ impl<'a> Iterator for InstIter<'a> {
         Some(Inst::Op11(InstOp11(self.0.pop_array()))),
       InstTag::Op21 =>
         Some(Inst::Op21(InstOp21(self.0.pop_array()))),
-      InstTag::Op31 =>
-        Some(Inst::Op31(InstOp31(self.0.pop_array()))),
       InstTag::Return => {
         let n = self.0.pop_u16() as usize;
         let n = 2 * n;
@@ -300,15 +179,15 @@ impl<'a> InstGoto<'a> {
     BlockId(x)
   }
 
-  pub fn args(self) -> VarIdList<'a> {
+  pub fn args(self) -> IdList<'a> {
     let x = self.0.get(2 ..).unwrap();
-    VarIdList(x)
+    IdList(x)
   }
 }
 
 impl<'a> InstIf<'a> {
-  pub fn args(self) -> [VarId; 1] {
-    [ VarId(self.0.get_u16(0)) ]
+  pub fn args(self) -> [Id; 1] {
+    [ Id(self.0.get_u16(0)) ]
   }
 
   pub fn targets(self) -> [BlockId; 2] {
@@ -341,8 +220,8 @@ impl<'a> InstOp11<'a> {
     Op11::decode(self.0.get_u8(0)).unwrap()
   }
 
-  pub fn args(self) -> [VarId; 1] {
-    [ VarId(self.0.get_u16(1)) ]
+  pub fn args(self) -> [Id; 1] {
+    [ Id(self.0.get_u16(1)) ]
   }
 }
 
@@ -351,29 +230,16 @@ impl<'a> InstOp21<'a> {
     Op21::decode(self.0.get_u8(0)).unwrap()
   }
 
-  pub fn args(self) -> [VarId; 2] {
-    [ VarId(self.0.get_u16(1)),
-      VarId(self.0.get_u16(3)),
-    ]
-  }
-}
-
-impl<'a> InstOp31<'a> {
-  pub fn op(self) -> Op31 {
-    Op31::decode(self.0.get_u8(0)).unwrap()
-  }
-
-  pub fn args(self) -> [VarId; 3] {
-    [ VarId(self.0.get_u16(1)),
-      VarId(self.0.get_u16(3)),
-      VarId(self.0.get_u16(5)),
+  pub fn args(self) -> [Id; 2] {
+    [ Id(self.0.get_u16(1)),
+      Id(self.0.get_u16(3)),
     ]
   }
 }
 
 impl<'a> InstReturn<'a> {
-  pub fn args(self) -> VarIdList<'a> {
-    VarIdList(self.0)
+  pub fn args(self) -> IdList<'a> {
+    IdList(self.0)
   }
 }
 
@@ -405,40 +271,35 @@ impl Op21 {
   }
 }
 
-impl Op31 {
-  pub fn decode(t: u8) -> Option<Self> {
-    if (t as usize) >= Self::VARIANT_COUNT { return None; }
-    Some(unsafe { core::mem::transmute::<u8, Self>(t) })
-  }
-}
-
 impl fmt::Display for BlockId {
   fn fmt(&self, out: &mut fmt::Formatter<'_>) -> fmt::Result {
     write!(out, "{}", self.0)
   }
 }
 
-impl fmt::Display for VarId {
+impl fmt::Display for Id {
   fn fmt(&self, out: &mut fmt::Formatter<'_>) -> fmt::Result {
     write!(out, "{}", self.0)
   }
 }
 
-impl<'a> fmt::Display for Program<'a> {
+impl<'a> fmt::Display for Prog<'a> {
   fn fmt(&self, out: &mut fmt::Formatter<'_>) -> fmt::Result {
     for f in self.fun_list().iter() {
       let mut i = 0; // varid
       let mut j = 0; // blockid
       write!(out, "function {} (", f.name())?;
-      for ty in f.fun_type().inputs().iter() {
+      for ty in f.input_ty_list().iter() {
         write!(out, " %{}:{}", i, ty)?;
         i += 1;
       }
       write!(out, " ) -> (")?;
-      for ty in f.fun_type().outputs().iter() {
+      for ty in f.output_ty_list().iter() {
         write!(out, " {}", ty)?;
       }
       write!(out, " ):\n")?;
+
+      /*
       for inst in f.inst_list().iter() {
         match inst {
           Inst::Block(x) => {
@@ -478,9 +339,6 @@ impl<'a> fmt::Display for Program<'a> {
           Inst::Op21(x) => {
             write!(out, "  %{} = {} {} {}\n", i, x.op(), x.args()[0], x.args()[1])?;
           }
-          Inst::Op31(x) => {
-            write!(out, "  %{} = {} {} {} {}\n", i, x.op(), x.args()[0], x.args()[1], x.args()[2])?;
-          }
           Inst::Return(x) => {
             write!(out, "  return")?;
             for arg in x.args().iter() {
@@ -490,6 +348,7 @@ impl<'a> fmt::Display for Program<'a> {
           }
         }
       }
+      */
       write!(out, "\n")?;
     }
 
@@ -498,6 +357,8 @@ impl<'a> fmt::Display for Program<'a> {
     Ok(())
   }
 }
+
+/*
 
 pub struct BcBuilder {
   buf: ByteBuf,
@@ -541,3 +402,4 @@ impl BcBuilder {
     self.fun_start = None;
   }
 }
+*/

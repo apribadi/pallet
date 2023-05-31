@@ -40,7 +40,6 @@ pub enum Inst<'a> {
   ImmI64(u64),
   Op11(Op11, VarId),
   Op21(Op21, VarId, VarId),
-  Op31(Op31, VarId, VarId, VarId),
   Ret(&'a [VarId]),
 }
 
@@ -60,12 +59,6 @@ impl Op11 {
 impl Op21 {
   pub fn types(self) -> ([Ty; 2], [Ty; 1]) {
     TYPE_OP_21[self as usize]
-  }
-}
-
-impl Op31 {
-  pub fn types(self) -> ([Ty; 3], [Ty; 1]) {
-    TYPE_OP_31[self as usize]
   }
 }
 
@@ -127,8 +120,4 @@ pub(crate) static TYPE_OP_21: &[([Ty; 2], [Ty; 1])] = &[
   /* I64ShrS      */ ([I64, I6], [I64]),
   /* I64ShrU      */ ([I64, I6], [I64]),
   /* I64Sub       */ ([I64, I64], [I64]),
-];
-
-pub(crate) static TYPE_OP_31: &[([Ty; 3], [Ty; 1])] = &[
-  /* I64Sel       */ ([Bool, I64, I64], [I64]),
 ];
